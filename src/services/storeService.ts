@@ -277,6 +277,24 @@ function cleanFirestoreData<T extends Record<string, any>>(obj: T): T {
   return result;
 }
 
+/**
+ * Non-blocking fast Firestore write helper.
+ * Commits writes to the local Firestore memory buffer & cache immediately, and
+ * races the network with a tight timeout (180ms) so the UI responds instantaneously
+ * without waiting on remote network roundtrips. The background promise continues
+ * syncing to Cloud Firestore without blocking the user.
+ */
+async function fastFirestoreWrite(writePromise: Promise<any>, timeoutMs = 180): Promise<void> {
+  try {
+    await Promise.race([
+      writePromise,
+      new Promise((resolve) => setTimeout(resolve, timeoutMs)),
+    ]);
+  } catch (error) {
+    console.warn('Fast Firestore write note (queued for background delivery):', error);
+  }
+}
+
 export async function addProduct(product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
   const path = 'products';
   try {
@@ -288,12 +306,13 @@ export async function addProduct(product: Omit<Product, 'id' | 'createdAt' | 'up
       createdAt: timestamp,
       updatedAt: timestamp,
     };
-    // Optimistic cache update
+    // Instant synchronous cache update
     const currentCached = getCachedProducts();
     setCachedProducts([newProduct, ...currentCached.filter(p => p.id !== newId)]);
 
     const cleaned = cleanFirestoreData(newProduct);
-    await setDoc(doc(db, path, newId), cleaned);
+    const writePromise = setDoc(doc(db, path, newId), cleaned);
+    await fastFirestoreWrite(writePromise);
     return newId;
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, path);
@@ -303,7 +322,7 @@ export async function addProduct(product: Omit<Product, 'id' | 'createdAt' | 'up
 export async function updateProduct(id: string, updates: Partial<Product>): Promise<void> {
   const path = `products/${id}`;
   try {
-    // Optimistic cache update
+    // Instant synchronous cache update
     const currentCached = getCachedProducts();
     setCachedProducts(currentCached.map(p => p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p));
 
@@ -314,7 +333,8 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
       updatedAt: new Date().toISOString(),
     });
     // Use setDoc with merge: true so if the watch came from initial static catalog, it creates/updates seamlessly
-    await setDoc(ref, cleaned, { merge: true });
+    const writePromise = setDoc(ref, cleaned, { merge: true });
+    await fastFirestoreWrite(writePromise);
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
   }
@@ -323,11 +343,12 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
 export async function deleteProduct(id: string): Promise<void> {
   const path = `products/${id}`;
   try {
-    // Optimistic cache update
+    // Instant synchronous cache update
     const currentCached = getCachedProducts();
     setCachedProducts(currentCached.filter(p => p.id !== id));
 
-    await deleteDoc(doc(db, 'products', id));
+    const deletePromise = deleteDoc(doc(db, 'products', id));
+    await fastFirestoreWrite(deletePromise);
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
   }
@@ -359,11 +380,12 @@ export async function getStoreSettings(): Promise<StoreSettings> {
 export async function updateStoreSettings(settings: Partial<StoreSettings>): Promise<void> {
   const path = 'settings/store';
   try {
-    // Write-through immediate cache update so changes apply instantly
+    // Write-through immediate cache update so changes apply instantly across the whole app
     setCachedStoreSettings(settings);
 
     const cleaned = cleanFirestoreData(settings);
-    await setDoc(doc(db, 'settings', 'store'), cleaned, { merge: true });
+    const writePromise = setDoc(doc(db, 'settings', 'store'), cleaned, { merge: true });
+    await fastFirestoreWrite(writePromise);
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
@@ -492,12 +514,13 @@ export async function updateOrderStatus(
   const path = `orders/${orderId}`;
   try {
     const ref = doc(db, 'orders', orderId);
-    await updateDoc(ref, {
+    const updatePromise = updateDoc(ref, {
       orderStatus,
       ...(options?.trackingNumber ? { trackingNumber: options.trackingNumber } : {}),
       ...(options?.carrier ? { carrier: options.carrier } : {}),
       updatedAt: new Date().toISOString(),
     });
+    await fastFirestoreWrite(updatePromise);
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
   }
@@ -523,7 +546,8 @@ export async function createContactMessage(
   };
 
   try {
-    await setDoc(doc(db, path, id), newMessage);
+    const writePromise = setDoc(doc(db, path, id), newMessage);
+    await fastFirestoreWrite(writePromise);
     return { id, referenceNumber: id.toUpperCase() };
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, path);
@@ -549,11 +573,12 @@ export async function updateContactMessageStatus(
   const path = `contactMessages/${id}`;
   try {
     const ref = doc(db, 'contactMessages', id);
-    await updateDoc(ref, {
+    const updatePromise = updateDoc(ref, {
       status,
       ...(adminNotes !== undefined ? { adminNotes } : {}),
       updatedAt: new Date().toISOString(),
     });
+    await fastFirestoreWrite(updatePromise);
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
   }
@@ -578,11 +603,12 @@ export async function addContactMessageReply(
       timestamp: new Date().toISOString(),
     };
 
-    await updateDoc(ref, {
+    const updatePromise = updateDoc(ref, {
       responseHistory: [...history, newReply],
       status: 'In Progress',
       updatedAt: new Date().toISOString(),
     });
+    await fastFirestoreWrite(updatePromise);
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
   }

@@ -26,10 +26,12 @@ import {
   Sparkles,
   Star,
   Trash2,
+  Upload,
   X,
   Zap,
 } from 'lucide-react';
 import { FaqItem, StoreSettings, TestimonialItem } from '../types';
+import { compressImageFile } from '../utils/imageCompressor';
 
 export const UPLOADED_WATCH_ASSETS = [
   { url: '/assets/aistudio/image_e63d280a.png', label: 'Noir Chronograph (Front Dial)' },
@@ -176,7 +178,7 @@ export const WebsiteCMSStudio: React.FC<WebsiteCMSStudioProps> = ({
     onSave(formData);
   };
 
-  // Reusable Image Field with Instant Preview & Gallery Picker
+  // Reusable Image Field with Instant Preview & Gallery Picker & Client-Side Auto-Compression
   const renderImageField = (
     label: string,
     key: keyof StoreSettings,
@@ -186,19 +188,52 @@ export const WebsiteCMSStudio: React.FC<WebsiteCMSStudioProps> = ({
     const currentValue = (formData[key] as string) || '';
     return (
       <div className="space-y-2 p-3 bg-[#0E0E0E] border border-neutral-800 rounded-sm">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5">
           <label className="text-[11px] font-bold text-neutral-300 uppercase tracking-wider flex items-center gap-1.5">
             <ImageIcon className="w-3.5 h-3.5 text-[#C9A227]" />
             <span>{label}</span>
           </label>
-          <button
-            type="button"
-            onClick={() => setGalleryTargetKey(key as string)}
-            className="text-[11px] text-[#E5C76B] hover:text-[#C9A227] font-semibold flex items-center gap-1 bg-[#1A1A1A] hover:bg-[#252525] px-2.5 py-1 rounded border border-[#C9A227]/30 transition self-start sm:self-auto cursor-pointer"
-          >
-            <Sparkles className="w-3 h-3 text-[#C9A227]" />
-            <span>Select from Watch Photos</span>
-          </button>
+          <div className="flex items-center gap-2 flex-wrap">
+            {/* Direct Device Upload with Instant Auto-Compression */}
+            <label
+              htmlFor={`upload-field-${key}`}
+              className="text-[11px] text-white hover:text-[#C9A227] font-semibold flex items-center gap-1 bg-[#1A1A1A] hover:bg-[#252525] px-2.5 py-1 rounded border border-neutral-700 transition cursor-pointer"
+              title="Upload photo from phone or computer with auto-compression"
+            >
+              <Upload className="w-3 h-3 text-[#C9A227]" />
+              <span>Upload Photo</span>
+            </label>
+            <input
+              type="file"
+              id={`upload-field-${key}`}
+              accept="image/*"
+              className="hidden"
+              onChange={async (e) => {
+                const file = e.target.files?.[0];
+                if (!file) return;
+                try {
+                  const compressed = await compressImageFile(file, {
+                    maxWidth: key === 'logoUrl' || key === 'crestUrl' ? 600 : 1200,
+                    maxHeight: key === 'logoUrl' || key === 'crestUrl' ? 600 : 1200,
+                    quality: 0.82,
+                  });
+                  handleFieldChange(key, compressed);
+                } catch (err: any) {
+                  alert('Image upload notice: ' + err.message);
+                }
+              }}
+            />
+
+            {/* Curated Watch Photo Presets */}
+            <button
+              type="button"
+              onClick={() => setGalleryTargetKey(key as string)}
+              className="text-[11px] text-[#E5C76B] hover:text-[#C9A227] font-semibold flex items-center gap-1 bg-[#1A1A1A] hover:bg-[#252525] px-2.5 py-1 rounded border border-[#C9A227]/30 transition cursor-pointer"
+            >
+              <Sparkles className="w-3 h-3 text-[#C9A227]" />
+              <span>Watch Catalog Photos</span>
+            </button>
+          </div>
         </div>
 
         <div className="flex items-center gap-2">

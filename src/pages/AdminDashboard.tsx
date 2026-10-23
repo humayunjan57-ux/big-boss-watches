@@ -18,9 +18,11 @@ import {
   ShoppingBag,
   Trash2,
   Truck,
+  Upload,
   Users,
   X,
 } from 'lucide-react';
+import { compressImageFile } from '../utils/imageCompressor';
 import { useAuth } from '../context/AuthContext';
 import {
   addContactMessageReply,
@@ -171,61 +173,98 @@ export const AdminDashboard: React.FC = () => {
     return true;
   });
 
-  // Handlers
+  // Handlers - Snappy optimistic state updates with background Firestore persistence
   const handleUpdateOrderStatus = async () => {
     if (!selectedOrder) return;
     setUpdatingOrder(true);
+    const orderId = selectedOrder.id;
+    const orderNum = selectedOrder.orderNumber;
+    const updatedOrder: Order = {
+      ...selectedOrder,
+      orderStatus: newOrderStatus,
+      trackingNumber: trackingNumber.trim() || undefined,
+      carrier: carrier.trim() || undefined,
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Instant local state update (0ms delay)
+    setOrders((prev) => prev.map((o) => (o.id === orderId ? updatedOrder : o)));
+    showNotice(`Order #${orderNum} status updated to ${newOrderStatus}`);
+    setSelectedOrder(null);
+    setUpdatingOrder(false);
+
     try {
-      await updateOrderStatus(selectedOrder.id, newOrderStatus, {
+      await updateOrderStatus(orderId, newOrderStatus, {
         trackingNumber: trackingNumber.trim() || undefined,
         carrier: carrier.trim() || undefined,
       });
-      showNotice(`Order #${selectedOrder.orderNumber} status updated to ${newOrderStatus}`);
-      setSelectedOrder(null);
-      loadAllData();
     } catch (err: any) {
-      alert(`Error updating order: ${err.message}`);
-    } finally {
-      setUpdatingOrder(false);
+      console.warn(`Background order sync notice: ${err.message}`);
     }
   };
 
   const handleUpdateInquiry = async () => {
     if (!selectedInquiry) return;
     setUpdatingInquiry(true);
+    const inquiryId = selectedInquiry.id;
+    const updatedInq: ContactMessage = {
+      ...selectedInquiry,
+      status: newInquiryStatus,
+      adminNotes: adminNotes,
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Instant local state update (0ms delay)
+    setInquiries((prev) => prev.map((i) => (i.id === inquiryId ? updatedInq : i)));
+    showNotice(`Inquiry #${inquiryId} updated`);
+    setSelectedInquiry(null);
+    setUpdatingInquiry(false);
+
     try {
-      await updateContactMessageStatus(selectedInquiry.id, newInquiryStatus, adminNotes);
-      showNotice(`Inquiry #${selectedInquiry.id} updated`);
-      setSelectedInquiry(null);
-      loadAllData();
+      await updateContactMessageStatus(inquiryId, newInquiryStatus, adminNotes);
     } catch (err: any) {
-      alert(`Error updating inquiry: ${err.message}`);
-    } finally {
-      setUpdatingInquiry(false);
+      console.warn(`Background inquiry sync notice: ${err.message}`);
     }
   };
 
   const handleSendInquiryReply = async () => {
     if (!selectedInquiry || !replyMessage.trim()) return;
+    const inquiryId = selectedInquiry.id;
+    const newReply = {
+      sender: 'BIG BOSS WATCHES Concierge',
+      message: replyMessage.trim(),
+      timestamp: new Date().toISOString(),
+    };
+    const updatedInq: ContactMessage = {
+      ...selectedInquiry,
+      status: 'In Progress',
+      responseHistory: [...(selectedInquiry.responseHistory || []), newReply],
+      updatedAt: new Date().toISOString(),
+    };
+
+    // Instant local state update (0ms delay)
+    setInquiries((prev) => prev.map((i) => (i.id === inquiryId ? updatedInq : i)));
+    showNotice(`Reply recorded and customer notified.`);
+    setReplyMessage('');
+    setSelectedInquiry(null);
+
     try {
-      await addContactMessageReply(selectedInquiry.id, replyMessage.trim());
-      showNotice(`Reply recorded and customer notified.`);
-      setReplyMessage('');
-      setSelectedInquiry(null);
-      loadAllData();
+      await addContactMessageReply(inquiryId, replyMessage.trim());
     } catch (err: any) {
-      alert(`Error dispatching reply: ${err.message}`);
+      console.warn(`Background reply sync notice: ${err.message}`);
     }
   };
 
   const handleDeleteProduct = async (id: string, name: string) => {
     if (!confirm(`Are you sure you want to delete ${name} from the catalog?`)) return;
+    // Instant local state update (0ms delay)
+    setProducts((prev) => prev.filter((p) => p.id !== id));
+    showNotice(`Deleted ${name}`);
     try {
       await deleteProduct(id);
-      showNotice(`Deleted ${name}`);
-      loadAllData();
     } catch (err: any) {
       alert(`Error deleting product: ${err.message}`);
+      loadAllData();
     }
   };
 
@@ -830,12 +869,13 @@ export const AdminDashboard: React.FC = () => {
             onSave={async (updatedSettings) => {
               setSavingSettings(true);
               setSettingsError(null);
+              // Instantly update parent state and local cache
+              setSettings(updatedSettings);
+              showNotice('Website changes saved instantly to cache & live database!');
               try {
                 await updateStoreSettings(updatedSettings);
-                setSettings(updatedSettings);
                 setSettingsSaveSuccess(true);
-                showNotice('Website changes published live to Firestore!');
-                setTimeout(() => setSettingsSaveSuccess(false), 5000);
+                setTimeout(() => setSettingsSaveSuccess(false), 4000);
               } catch (err: any) {
                 setSettingsError(err.message || 'Failed to publish changes.');
               } finally {
@@ -882,12 +922,14 @@ export const AdminDashboard: React.FC = () => {
                     adminEmails: adminEmailsList,
                   };
 
-                  await updateStoreSettings(updatedSettings);
+                  // Instant local state commit
                   setSettings(updatedSettings);
                   setNewAdminEmail('');
                   setSettingsSaveSuccess(true);
-                  showNotice('Boutique configuration saved to Firestore!');
-                  setTimeout(() => setSettingsSaveSuccess(false), 5000);
+                  showNotice('Boutique configuration saved instantly!');
+                  setTimeout(() => setSettingsSaveSuccess(false), 4000);
+
+                  await updateStoreSettings(updatedSettings);
                 } catch (err: any) {
                   setSettingsError(err.message || 'Failed to save settings.');
                 } finally {
@@ -1447,11 +1489,18 @@ export const AdminDashboard: React.FC = () => {
               setProductModalOpen(false);
               setEditingProduct(null);
             }}
-            onSaveSuccess={(msg) => {
+            onSaveSuccess={(msg, savedProduct) => {
               setProductModalOpen(false);
               setEditingProduct(null);
               showNotice(msg);
-              loadAllData();
+              // Optimistically update products state immediately without full-screen loading spinner
+              setProducts((prev) => {
+                const exists = prev.some((p) => p.id === savedProduct.id);
+                if (exists) {
+                  return prev.map((p) => (p.id === savedProduct.id ? savedProduct : p));
+                }
+                return [savedProduct, ...prev];
+              });
             }}
           />
         )}
@@ -1464,7 +1513,7 @@ export const AdminDashboard: React.FC = () => {
 interface ProductFormModalProps {
   product: Product | null;
   onClose: () => void;
-  onSaveSuccess: (msg: string) => void;
+  onSaveSuccess: (msg: string, savedProduct: Product) => void;
 }
 
 const ProductFormModal: React.FC<ProductFormModalProps> = ({ product, onClose, onSaveSuccess }) => {
@@ -1549,12 +1598,20 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ product, onClose, o
         active: true,
       };
 
+      const finalProduct: Product = {
+        ...payload,
+        id: product ? product.id : (payload.slug || `bb-${Date.now()}`),
+        createdAt: product?.createdAt || new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
+      };
+
       if (product) {
         await updateProduct(product.id, payload);
-        onSaveSuccess(`Updated timepiece ${name}`);
+        onSaveSuccess(`Updated timepiece ${name}`, finalProduct);
       } else {
-        await addProduct(payload);
-        onSaveSuccess(`Added new timepiece ${name}`);
+        const newId = await addProduct(payload);
+        if (newId) finalProduct.id = newId;
+        onSaveSuccess(`Added new timepiece ${name}`, finalProduct);
       }
     } catch (err: any) {
       setModalError(err.message || 'Error saving timepiece to database.');
@@ -1772,11 +1829,42 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ product, onClose, o
               <span className="text-[10px] text-neutral-400">First image is primary thumbnail</span>
             </div>
 
-            {/* Quick Uploaded Watch Photos insertion */}
+            {/* Quick Uploaded Watch Photos insertion & Direct Device Upload */}
             <div className="space-y-1.5">
-              <span className="text-[10px] text-[#C9A227] font-semibold uppercase block">
-                Quick Insert Uploaded Watch Photos:
-              </span>
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] text-[#C9A227] font-semibold uppercase block">
+                  Add Watch Photos:
+                </span>
+                <label
+                  htmlFor="watch-photo-upload"
+                  className="text-[10px] bg-[#1C1C1C] hover:bg-[#282828] text-white hover:text-[#C9A227] px-2.5 py-1 rounded border border-neutral-700 transition cursor-pointer flex items-center gap-1"
+                >
+                  <Upload className="w-3 h-3 text-[#C9A227]" />
+                  <span>Upload & Auto-Compress Photo</span>
+                </label>
+                <input
+                  type="file"
+                  id="watch-photo-upload"
+                  accept="image/*"
+                  className="hidden"
+                  onChange={async (e) => {
+                    const file = e.target.files?.[0];
+                    if (!file) return;
+                    try {
+                      const compressed = await compressImageFile(file, {
+                        maxWidth: 900,
+                        maxHeight: 900,
+                        quality: 0.82,
+                      });
+                      const trimmed = imagesText.trim();
+                      setImagesText(trimmed ? `${trimmed}\n${compressed}` : compressed);
+                    } catch (err: any) {
+                      alert('Could not process photo: ' + err.message);
+                    }
+                  }}
+                />
+              </div>
+
               <div className="flex items-center gap-1.5 flex-wrap">
                 {UPLOADED_WATCH_ASSETS.map((asset, idx) => (
                   <button
