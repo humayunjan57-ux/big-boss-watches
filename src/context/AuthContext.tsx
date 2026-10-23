@@ -104,18 +104,28 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   useEffect(() => {
-    const unsubscribe = onAuthStateChanged(auth, async (user) => {
-      setCurrentUser(user);
-      if (user) {
-        const adminCheck = await evaluateAdminStatus(user);
-        setIsAdmin(adminCheck);
-        await loadUserProfile(user);
-      } else {
+    const unsubscribe = onAuthStateChanged(
+      auth,
+      async (user) => {
+        setCurrentUser(user);
+        if (user) {
+          const adminCheck = await evaluateAdminStatus(user);
+          setIsAdmin(adminCheck);
+          await loadUserProfile(user);
+        } else {
+          setUserProfile(null);
+          setIsAdmin(false);
+        }
+        setLoading(false);
+      },
+      (error) => {
+        console.warn('Auth state observation note:', error);
+        setCurrentUser(null);
         setUserProfile(null);
         setIsAdmin(false);
+        setLoading(false);
       }
-      setLoading(false);
-    });
+    );
 
     return () => unsubscribe();
   }, []);

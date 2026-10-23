@@ -75,4 +75,6 @@ export async function testConnection(): Promise<boolean> {
 }
 
 // Initial connection test
-testConnection();
+testConnection().catch((e) => {
+  console.warn('Initial connection check notice:', e);
+});
