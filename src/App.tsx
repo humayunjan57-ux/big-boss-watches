@@ -75,6 +75,26 @@ function MainApp() {
     };
   }, []);
 
+  // Sync document title and browser tab favicon dynamically if custom logo is set in CMS
+  useEffect(() => {
+    if (storeSettings?.brandTitle) {
+      document.title = `${storeSettings.brandTitle} ${storeSettings.brandSubtitle ? '– ' + storeSettings.brandSubtitle : '– TIME, REDEFINED'}`;
+    }
+
+    const targetFavicon = storeSettings?.logoUrl?.trim() || '/favicon.svg';
+    const iconLinks = document.querySelectorAll<HTMLLinkElement>("link[rel*='icon']");
+    if (iconLinks.length > 0) {
+      iconLinks.forEach((link) => {
+        if (link.type === 'image/svg+xml' || link.getAttribute('sizes') === 'any' || !storeSettings?.logoUrl?.trim()) {
+          link.href = targetFavicon;
+        } else if (storeSettings?.logoUrl?.trim()) {
+          // If custom uploaded logo, point all favicon links to custom logo
+          link.href = targetFavicon;
+        }
+      });
+    }
+  }, [storeSettings]);
+
   // Scroll to top on page transition
   const handleNavigate = (page: string, param?: string) => {
     window.scrollTo({ top: 0, behavior: 'smooth' });

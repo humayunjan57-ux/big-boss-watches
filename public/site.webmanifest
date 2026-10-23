@@ -1,0 +1,27 @@
+{
+  "name": "BIG BOSS WATCHES",
+  "short_name": "BIG BOSS",
+  "description": "TIME, REDEFINED. Precision. Power. Prestige. Official luxury horology atelier and boutique.",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/android-chrome-192x192.png",
+      "sizes": "192x192",
+      "type": "image/png"
+    },
+    {
+      "src": "/android-chrome-512x512.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ],
+  "theme_color": "#0B0B0B",
+  "background_color": "#0B0B0B",
+  "display": "standalone",
+  "start_url": "/"
+}
