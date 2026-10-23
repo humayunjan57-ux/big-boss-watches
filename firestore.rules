@@ -23,9 +23,25 @@ service cloud.firestore {
       return resource.data;
     }
 
+    function isMasterAdmin() {
+      return isSignedIn() && request.auth.token.email.lower() == 'humayunjan57@gmail.com';
+    }
+
+    function isApprovedAdminEmail() {
+      return isSignedIn() && (
+        isMasterAdmin() ||
+        (
+          exists(/databases/$(database)/documents/settings/store) &&
+          'adminEmails' in get(/databases/$(database)/documents/settings/store).data &&
+          get(/databases/$(database)/documents/settings/store).data.adminEmails.hasAny([request.auth.token.email.lower()])
+        )
+      );
+    }
+
     function isAdmin() {
       return isSignedIn() && (
-        request.auth.token.email == 'humayunjan57@gmail.com' ||
+        isMasterAdmin() ||
+        isApprovedAdminEmail() ||
         exists(/databases/$(database)/documents/admins/$(request.auth.uid))
       );
     }
@@ -104,7 +120,8 @@ service cloud.firestore {
 
     // Admins registry
     match /admins/{adminId} {
-      allow read, write: if isAdmin() && isValidId(adminId);
+      allow read: if isSignedIn() && (request.auth.uid == adminId || isAdmin()) && isValidId(adminId);
+      allow write: if (isAdmin() || (isSignedIn() && request.auth.uid == adminId && isApprovedAdminEmail())) && isValidId(adminId);
     }
   }
 }

@@ -80,6 +80,11 @@ export const AdminDashboard: React.FC = () => {
   const [inquirySearch, setInquirySearch] = useState('');
   const [inquiryStatusFilter, setInquiryStatusFilter] = useState<string>('all');
   const [newAdminEmail, setNewAdminEmail] = useState('');
+  const [savingSettings, setSavingSettings] = useState(false);
+  const [settingsSaveSuccess, setSettingsSaveSuccess] = useState(false);
+  const [settingsError, setSettingsError] = useState<string | null>(null);
+  const [updatingOrder, setUpdatingOrder] = useState(false);
+  const [updatingInquiry, setUpdatingInquiry] = useState(false);
 
   const showNotice = (msg: string) => {
     setActionSuccess(msg);
@@ -168,6 +173,7 @@ export const AdminDashboard: React.FC = () => {
   // Handlers
   const handleUpdateOrderStatus = async () => {
     if (!selectedOrder) return;
+    setUpdatingOrder(true);
     try {
       await updateOrderStatus(selectedOrder.id, newOrderStatus, {
         trackingNumber: trackingNumber.trim() || undefined,
@@ -178,11 +184,14 @@ export const AdminDashboard: React.FC = () => {
       loadAllData();
     } catch (err: any) {
       alert(`Error updating order: ${err.message}`);
+    } finally {
+      setUpdatingOrder(false);
     }
   };
 
   const handleUpdateInquiry = async () => {
     if (!selectedInquiry) return;
+    setUpdatingInquiry(true);
     try {
       await updateContactMessageStatus(selectedInquiry.id, newInquiryStatus, adminNotes);
       showNotice(`Inquiry #${selectedInquiry.id} updated`);
@@ -190,6 +199,8 @@ export const AdminDashboard: React.FC = () => {
       loadAllData();
     } catch (err: any) {
       alert(`Error updating inquiry: ${err.message}`);
+    } finally {
+      setUpdatingInquiry(false);
     }
   };
 
@@ -823,11 +834,33 @@ export const AdminDashboard: React.FC = () => {
             <form
               onSubmit={async (e) => {
                 e.preventDefault();
+                setSavingSettings(true);
+                setSettingsError(null);
                 try {
-                  await updateStoreSettings(settings);
-                  showNotice('Store configuration saved to Firestore!');
+                  // If the user typed an email into the new admin email field but clicked Save directly, auto-include it!
+                  let adminEmailsList = settings.adminEmails ? [...settings.adminEmails] : [];
+                  const pendingEmail = newAdminEmail.trim().toLowerCase();
+                  if (pendingEmail && pendingEmail.includes('@')) {
+                    if (!adminEmailsList.map((em) => em.toLowerCase()).includes(pendingEmail) && pendingEmail !== 'humayunjan57@gmail.com') {
+                      adminEmailsList.push(pendingEmail);
+                    }
+                  }
+
+                  const updatedSettings: StoreSettings = {
+                    ...settings,
+                    adminEmails: adminEmailsList,
+                  };
+
+                  await updateStoreSettings(updatedSettings);
+                  setSettings(updatedSettings);
+                  setNewAdminEmail('');
+                  setSettingsSaveSuccess(true);
+                  showNotice('Boutique configuration saved to Firestore!');
+                  setTimeout(() => setSettingsSaveSuccess(false), 5000);
                 } catch (err: any) {
-                  alert(`Failed to save settings: ${err.message}`);
+                  setSettingsError(err.message || 'Failed to save settings.');
+                } finally {
+                  setSavingSettings(false);
                 }
               }}
               className="space-y-4 text-xs"
@@ -1039,12 +1072,34 @@ export const AdminDashboard: React.FC = () => {
                 </div>
               </div>
 
-              <div className="pt-4">
+              {settingsSaveSuccess && (
+                <div className="p-3 bg-emerald-950/80 border border-emerald-600 text-emerald-200 rounded flex items-center gap-2 text-xs">
+                  <CheckCircle2 className="w-4 h-4 text-emerald-400 shrink-0" />
+                  <span>Configuration successfully saved to live database!</span>
+                </div>
+              )}
+
+              {settingsError && (
+                <div className="p-3 bg-red-950/80 border border-red-600 text-red-200 rounded flex items-center gap-2 text-xs">
+                  <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+                  <span>Save failed: {settingsError}</span>
+                </div>
+              )}
+
+              <div className="pt-4 flex items-center gap-4">
                 <button
                   type="submit"
-                  className="px-6 py-2.5 bg-[#C9A227] hover:bg-[#E5C76B] text-black font-bold text-xs uppercase tracking-wider rounded-sm transition cursor-pointer"
+                  disabled={savingSettings}
+                  className="px-6 py-2.5 bg-[#C9A227] hover:bg-[#E5C76B] text-black font-bold text-xs uppercase tracking-wider rounded-sm transition cursor-pointer disabled:opacity-50 flex items-center gap-2"
                 >
-                  Save Boutique Configuration
+                  {savingSettings ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving Configuration...</span>
+                    </>
+                  ) : (
+                    <span>Save Boutique Configuration</span>
+                  )}
                 </button>
               </div>
             </form>
@@ -1184,9 +1239,17 @@ export const AdminDashboard: React.FC = () => {
                   </button>
                   <button
                     onClick={handleUpdateOrderStatus}
-                    className="px-5 py-2 bg-[#C9A227] hover:bg-[#E5C76B] text-black font-bold text-xs uppercase tracking-wider rounded"
+                    disabled={updatingOrder}
+                    className="px-5 py-2 bg-[#C9A227] hover:bg-[#E5C76B] text-black font-bold text-xs uppercase tracking-wider rounded disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                   >
-                    Commit Status Update
+                    {updatingOrder ? (
+                      <>
+                        <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                        <span>Updating...</span>
+                      </>
+                    ) : (
+                      <span>Commit Status Update</span>
+                    )}
                   </button>
                 </div>
               </div>
@@ -1326,9 +1389,17 @@ export const AdminDashboard: React.FC = () => {
                 </button>
                 <button
                   onClick={handleUpdateInquiry}
-                  className="px-5 py-2 bg-[#C9A227] hover:bg-[#E5C76B] text-black font-bold text-xs uppercase tracking-wider rounded"
+                  disabled={updatingInquiry}
+                  className="px-5 py-2 bg-[#C9A227] hover:bg-[#E5C76B] text-black font-bold text-xs uppercase tracking-wider rounded disabled:opacity-50 flex items-center gap-1.5 cursor-pointer"
                 >
-                  Save Status & Notes
+                  {updatingInquiry ? (
+                    <>
+                      <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                      <span>Saving...</span>
+                    </>
+                  ) : (
+                    <span>Save Status & Notes</span>
+                  )}
                 </button>
               </div>
             </div>
@@ -1396,10 +1467,12 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ product, onClose, o
   );
 
   const [saving, setSaving] = useState(false);
+  const [modalError, setModalError] = useState<string | null>(null);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setSaving(true);
+    setModalError(null);
 
     try {
       const parsedImages = imagesText
@@ -1453,7 +1526,7 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ product, onClose, o
         onSaveSuccess(`Added new timepiece ${name}`);
       }
     } catch (err: any) {
-      alert(`Save error: ${err.message}`);
+      setModalError(err.message || 'Error saving timepiece to database.');
     } finally {
       setSaving(false);
     }
@@ -1695,6 +1768,13 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ product, onClose, o
             </label>
           </div>
 
+          {modalError && (
+            <div className="p-3 bg-red-950/80 border border-red-600 text-red-200 rounded flex items-center gap-2 text-xs">
+              <AlertCircle className="w-4 h-4 text-red-400 shrink-0" />
+              <span>Save error: {modalError}</span>
+            </div>
+          )}
+
           <div className="flex justify-end gap-3 pt-4 border-t border-[#222222]">
             <button
               type="button"
@@ -1706,9 +1786,16 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ product, onClose, o
             <button
               type="submit"
               disabled={saving}
-              className="px-6 py-2 bg-[#C9A227] hover:bg-[#E5C76B] text-black font-bold uppercase tracking-wider rounded"
+              className="px-6 py-2 bg-[#C9A227] hover:bg-[#E5C76B] text-black font-bold uppercase tracking-wider rounded disabled:opacity-50 flex items-center gap-2 cursor-pointer"
             >
-              {saving ? 'Saving Timepiece...' : 'Save Timepiece'}
+              {saving ? (
+                <>
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                  <span>Saving Timepiece...</span>
+                </>
+              ) : (
+                <span>Save Timepiece</span>
+              )}
             </button>
           </div>
         </form>

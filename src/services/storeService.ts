@@ -167,6 +167,24 @@ export async function getCollections(): Promise<Collection[]> {
   }
 }
 
+/**
+ * Helper to recursively remove undefined properties before saving to Firestore.
+ * Prevents Firestore "Unsupported field value: undefined" runtime errors.
+ */
+function cleanFirestoreData<T extends Record<string, any>>(obj: T): T {
+  const result: any = {};
+  for (const [key, value] of Object.entries(obj)) {
+    if (value !== undefined) {
+      if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
+        result[key] = cleanFirestoreData(value);
+      } else {
+        result[key] = value;
+      }
+    }
+  }
+  return result;
+}
+
 export async function addProduct(product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
   const path = 'products';
   try {
@@ -178,7 +196,8 @@ export async function addProduct(product: Omit<Product, 'id' | 'createdAt' | 'up
       createdAt: timestamp,
       updatedAt: timestamp,
     };
-    await setDoc(doc(db, path, newId), newProduct);
+    const cleaned = cleanFirestoreData(newProduct);
+    await setDoc(doc(db, path, newId), cleaned);
     return newId;
   } catch (error) {
     handleFirestoreError(error, OperationType.CREATE, path);
@@ -189,10 +208,13 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
   const path = `products/${id}`;
   try {
     const ref = doc(db, 'products', id);
-    await updateDoc(ref, {
+    const cleaned = cleanFirestoreData({
       ...updates,
+      id,
       updatedAt: new Date().toISOString(),
     });
+    // Use setDoc with merge: true so if the watch came from initial static catalog, it creates/updates seamlessly
+    await setDoc(ref, cleaned, { merge: true });
   } catch (error) {
     handleFirestoreError(error, OperationType.UPDATE, path);
   }
@@ -231,7 +253,8 @@ export async function getStoreSettings(): Promise<StoreSettings> {
 export async function updateStoreSettings(settings: Partial<StoreSettings>): Promise<void> {
   const path = 'settings/store';
   try {
-    await setDoc(doc(db, 'settings', 'store'), settings, { merge: true });
+    const cleaned = cleanFirestoreData(settings);
+    await setDoc(doc(db, 'settings', 'store'), cleaned, { merge: true });
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
