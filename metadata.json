@@ -1,0 +1,8 @@
+{
+  "name": "BIG BOSS WATCHES",
+  "description": "TIME, REDEFINED. Precision. Power. Prestige. Luxury wristwatch boutique featuring the Noir and Royal collections, seamless ordering, and customer support.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

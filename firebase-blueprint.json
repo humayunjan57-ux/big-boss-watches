@@ -1,0 +1,168 @@
+{
+  "entities": {
+    "Product": {
+      "title": "Product",
+      "description": "Luxury timepiece entity",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 150 },
+        "slug": { "type": "string", "maxLength": 150 },
+        "modelNumber": { "type": "string", "maxLength": 64 },
+        "collectionId": { "type": "string", "maxLength": 64 },
+        "price": { "type": "number" },
+        "salePrice": { "type": "number" },
+        "description": { "type": "string", "maxLength": 5000 },
+        "specifications": { "type": "object" },
+        "images": { "type": "array" },
+        "stockQuantity": { "type": "number" },
+        "inStock": { "type": "boolean" },
+        "featured": { "type": "boolean" },
+        "isNewArrival": { "type": "boolean" },
+        "active": { "type": "boolean" },
+        "createdAt": { "type": "string" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["name", "modelNumber", "collectionId", "price", "stockQuantity", "active"]
+    },
+    "Collection": {
+      "title": "Collection",
+      "description": "Watch collection series (Noir, Royal)",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 64 },
+        "name": { "type": "string", "maxLength": 100 },
+        "slug": { "type": "string", "maxLength": 100 },
+        "description": { "type": "string", "maxLength": 2000 },
+        "heroImage": { "type": "string", "maxLength": 1000 },
+        "accentColor": { "type": "string", "maxLength": 20 },
+        "active": { "type": "boolean" }
+      },
+      "required": ["name", "slug", "active"]
+    },
+    "Order": {
+      "title": "Order",
+      "description": "Customer watch purchase order",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "orderNumber": { "type": "string", "maxLength": 64 },
+        "userId": { "type": "string", "maxLength": 128 },
+        "customerName": { "type": "string", "maxLength": 150 },
+        "customerEmail": { "type": "string", "maxLength": 150 },
+        "customerPhone": { "type": "string", "maxLength": 50 },
+        "shippingAddress": { "type": "string", "maxLength": 500 },
+        "city": { "type": "string", "maxLength": 100 },
+        "postalCode": { "type": "string", "maxLength": 30 },
+        "items": { "type": "array" },
+        "subtotal": { "type": "number" },
+        "shippingFee": { "type": "number" },
+        "discount": { "type": "number" },
+        "total": { "type": "number" },
+        "paymentMethod": { "type": "string", "maxLength": 50 },
+        "paymentStatus": { "type": "string", "maxLength": 50 },
+        "orderStatus": { "type": "string", "maxLength": 50 },
+        "notes": { "type": "string", "maxLength": 1000 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["orderNumber", "customerName", "customerEmail", "customerPhone", "shippingAddress", "city", "items", "subtotal", "total", "paymentMethod", "orderStatus"]
+    },
+    "Cart": {
+      "title": "Cart",
+      "description": "Customer shopping cart",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "items": { "type": "array" },
+        "updatedAt": { "type": "string" }
+      },
+      "required": ["userId", "items"]
+    },
+    "ContactMessage": {
+      "title": "ContactMessage",
+      "description": "Customer support inquiry",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "name": { "type": "string", "maxLength": 150 },
+        "email": { "type": "string", "maxLength": 150 },
+        "phone": { "type": "string", "maxLength": 50 },
+        "category": { "type": "string", "maxLength": 100 },
+        "orderNumber": { "type": "string", "maxLength": 64 },
+        "subject": { "type": "string", "maxLength": 200 },
+        "message": { "type": "string", "maxLength": 5000 },
+        "attachmentUrl": { "type": "string", "maxLength": 1000 },
+        "status": { "type": "string", "maxLength": 50 },
+        "adminNotes": { "type": "string", "maxLength": 5000 },
+        "createdAt": { "type": "string" }
+      },
+      "required": ["name", "email", "category", "subject", "message", "status"]
+    },
+    "StoreSettings": {
+      "title": "StoreSettings",
+      "description": "Global store and boutique configuration",
+      "type": "object",
+      "properties": {
+        "businessName": { "type": "string", "maxLength": 150 },
+        "slogan": { "type": "string", "maxLength": 150 },
+        "email": { "type": "string", "maxLength": 150 },
+        "phones": { "type": "array" },
+        "whatsAppNumbers": { "type": "array" },
+        "address": { "type": "string", "maxLength": 300 },
+        "supportHours": { "type": "string", "maxLength": 200 },
+        "responseTime": { "type": "string", "maxLength": 100 },
+        "shippingFee": { "type": "number" },
+        "codEnabled": { "type": "boolean" }
+      },
+      "required": ["businessName", "email"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "Customer account profile",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 150 },
+        "displayName": { "type": "string", "maxLength": 150 },
+        "phone": { "type": "string", "maxLength": 50 },
+        "shippingAddress": { "type": "object" },
+        "role": { "type": "string", "maxLength": 50 }
+      },
+      "required": ["uid", "email"]
+    }
+  },
+  "firestore": {
+    "/products/{productId}": {
+      "schema": "Product",
+      "description": "Timepieces catalog available to customers and managed by boutique admins"
+    },
+    "/collections/{collectionId}": {
+      "schema": "Collection",
+      "description": "Curated collections such as BIG BOSS NOIR and BIG BOSS ROYAL"
+    },
+    "/orders/{orderId}": {
+      "schema": "Order",
+      "description": "Purchased orders placed by authenticated customers or guests"
+    },
+    "/carts/{userId}": {
+      "schema": "Cart",
+      "description": "Customer synchronized shopping cart"
+    },
+    "/contactMessages/{messageId}": {
+      "schema": "ContactMessage",
+      "description": "Customer inquiries and support requests"
+    },
+    "/settings/{settingId}": {
+      "schema": "StoreSettings",
+      "description": "Boutique contact information, policies, and homepage announcements"
+    },
+    "/users/{userId}": {
+      "schema": "UserProfile",
+      "description": "Customer profile and saved shipping information"
+    },
+    "/admins/{adminId}": {
+      "schema": "UserProfile",
+      "description": "Authorized administrator registry"
+    }
+  }
+}

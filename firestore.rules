@@ -1,0 +1,110 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Default deny catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isAdmin() {
+      return isSignedIn() && (
+        request.auth.token.email == 'humayunjan57@gmail.com' ||
+        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+      );
+    }
+
+    // Products catalog
+    match /products/{productId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() && isValidId(productId);
+    }
+
+    // Collections (Noir, Royal)
+    match /collections/{collectionId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() && isValidId(collectionId);
+    }
+
+    // Boutique Settings (Store details, homepage announcements, policies)
+    match /settings/{settingId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin() && isValidId(settingId);
+    }
+
+    // Customer Carts
+    match /carts/{userId} {
+      allow read, write: if isSignedIn() && request.auth.uid == userId && isValidId(userId);
+    }
+
+    // Orders
+    match /orders/{orderId} {
+      allow read: if (
+        isAdmin() ||
+        (isSignedIn() && resource.data.userId == request.auth.uid)
+      );
+
+      allow create: if isValidId(orderId) &&
+        incoming().orderNumber is string && incoming().orderNumber.size() <= 64 &&
+        incoming().customerName is string && incoming().customerName.size() <= 150 &&
+        incoming().customerEmail is string && incoming().customerEmail.size() <= 150 &&
+        incoming().customerPhone is string && incoming().customerPhone.size() <= 50 &&
+        incoming().shippingAddress is string && incoming().shippingAddress.size() <= 500 &&
+        incoming().city is string && incoming().city.size() <= 100 &&
+        incoming().items is list && incoming().items.size() > 0 && incoming().items.size() <= 50 &&
+        incoming().subtotal is number && incoming().total is number &&
+        incoming().paymentMethod is string &&
+        incoming().orderStatus is string &&
+        (
+          (!isSignedIn() && (incoming().userId == 'guest' || incoming().userId == '')) ||
+          (isSignedIn() && incoming().userId == request.auth.uid)
+        );
+
+      allow update: if isAdmin() && isValidId(orderId);
+      allow delete: if isAdmin() && isValidId(orderId);
+    }
+
+    // Customer Inquiries & Support Messages
+    match /contactMessages/{messageId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.email == request.auth.token.email);
+      
+      allow create: if isValidId(messageId) &&
+        incoming().name is string && incoming().name.size() > 0 && incoming().name.size() <= 150 &&
+        incoming().email is string && incoming().email.size() > 0 && incoming().email.size() <= 150 &&
+        incoming().category is string && incoming().category.size() <= 100 &&
+        incoming().subject is string && incoming().subject.size() > 0 && incoming().subject.size() <= 200 &&
+        incoming().message is string && incoming().message.size() > 0 && incoming().message.size() <= 5000 &&
+        incoming().status == 'New';
+
+      allow update, delete: if isAdmin() && isValidId(messageId);
+    }
+
+    // User Profiles
+    match /users/{userId} {
+      allow read: if isSignedIn() && (request.auth.uid == userId || isAdmin()) && isValidId(userId);
+      allow create, update: if isSignedIn() && (request.auth.uid == userId || isAdmin()) && isValidId(userId);
+      allow delete: if isAdmin() && isValidId(userId);
+    }
+
+    // Admins registry
+    match /admins/{adminId} {
+      allow read, write: if isAdmin() && isValidId(adminId);
+    }
+  }
+}
