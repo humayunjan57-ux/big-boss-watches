@@ -95,23 +95,29 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, storeSettings }) => 
           {/* Brand Column */}
           <div className="lg:col-span-2">
             <div className="flex items-center gap-3">
-              <div className="w-9 h-9 rounded-sm bg-[#171717] border border-[#C9A227] flex items-center justify-center">
-                <Crown className="w-5 h-5 text-[#C9A227]" />
-              </div>
+              {storeSettings?.logoUrl ? (
+                <div className="w-9 h-9 rounded-sm bg-[#171717] border border-[#C9A227] flex items-center justify-center overflow-hidden">
+                  <img src={storeSettings.logoUrl} alt="Logo" className="w-full h-full object-contain p-0.5" />
+                </div>
+              ) : (
+                <div className="w-9 h-9 rounded-sm bg-[#171717] border border-[#C9A227] flex items-center justify-center">
+                  <Crown className="w-5 h-5 text-[#C9A227]" />
+                </div>
+              )}
               <span className="font-serif text-xl font-bold tracking-[0.2em] text-white">
-                BIG BOSS WATCHES
+                {storeSettings?.brandTitle || storeSettings?.businessName || 'BIG BOSS WATCHES'}
               </span>
             </div>
 
             <p className="font-serif text-sm text-[#C9A227] tracking-widest mt-2 uppercase font-semibold">
-              TIME, REDEFINED.
+              {storeSettings?.slogan || 'TIME, REDEFINED.'}
             </p>
             <p className="text-xs text-[#E5C76B] font-medium tracking-widest mt-0.5">
-              PRECISION. POWER. PRESTIGE.
+              {storeSettings?.brandStatement || 'PRECISION. POWER. PRESTIGE.'}
             </p>
 
             <p className="text-xs text-neutral-400 mt-4 leading-relaxed max-w-sm">
-              BIG BOSS WATCHES designs and manufactures world-class luxury wristwatches forged for titans of industry and connoisseurs of refined precision.
+              {storeSettings?.footerAbout || 'BIG BOSS WATCHES designs and manufactures world-class luxury wristwatches forged for titans of industry and connoisseurs of refined precision.'}
             </p>
 
             <div className="mt-6 flex flex-col gap-2 text-xs">
@@ -293,7 +299,7 @@ export const Footer: React.FC<FooterProps> = ({ onNavigate, storeSettings }) => 
         {/* Bottom Legal Copyright Strip */}
         <div className="border-t border-[#1C1C1C] mt-12 pt-8 flex flex-col sm:flex-row items-center justify-between gap-4 text-xs text-neutral-500">
           <p>
-            © {new Date().getFullYear()} BIG BOSS WATCHES. All Rights Reserved. Precision horology engineered for leadership.
+            {storeSettings?.copyrightText || `© ${new Date().getFullYear()} ${storeSettings?.brandTitle || 'BIG BOSS WATCHES'}. All Rights Reserved. Precision horology engineered for leadership.`}
           </p>
           <div className="flex items-center gap-6">
             <button

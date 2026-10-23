@@ -20,6 +20,7 @@ import {
   getProducts,
   getStoreSettings,
   initializeStoreData,
+  subscribeToStoreSettings,
 } from './services/storeService';
 import { Collection, Order, Product, StoreSettings } from './types';
 
@@ -42,7 +43,7 @@ function MainApp() {
   const [storeSettings, setStoreSettings] = useState<StoreSettings | undefined>(undefined);
   const [initialLoading, setInitialLoading] = useState<boolean>(true);
 
-  // Initial Data Fetch & Firestore Bootstrap
+  // Initial Data Fetch & Firestore Bootstrap + Real-Time Subscriptions
   useEffect(() => {
     const init = async () => {
       try {
@@ -63,6 +64,15 @@ function MainApp() {
     };
 
     init();
+
+    // Subscribe to live store settings & CMS content changes from Firestore
+    const unsubscribeSettings = subscribeToStoreSettings((liveSettings) => {
+      setStoreSettings(liveSettings);
+    });
+
+    return () => {
+      unsubscribeSettings();
+    };
   }, []);
 
   // Scroll to top on page transition
@@ -169,7 +179,7 @@ function MainApp() {
         )}
 
         {currentPage === 'about' && (
-          <AboutPage onNavigate={handleNavigate} />
+          <AboutPage onNavigate={handleNavigate} storeSettings={storeSettings} />
         )}
 
         {currentPage === 'admin' && (

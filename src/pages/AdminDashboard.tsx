@@ -44,11 +44,12 @@ import {
   Product,
   StoreSettings,
 } from '../types';
+import { WebsiteCMSStudio, UPLOADED_WATCH_ASSETS } from '../components/WebsiteCMSStudio';
 
 export const AdminDashboard: React.FC = () => {
   const { currentUser, isAdmin } = useAuth();
 
-  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'orders' | 'inquiries' | 'settings'>('overview');
+  const [activeTab, setActiveTab] = useState<'overview' | 'products' | 'cms' | 'orders' | 'inquiries' | 'settings'>('products');
   const [loading, setLoading] = useState(true);
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
 
@@ -289,14 +290,15 @@ export const AdminDashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Navigation Tabs */}
-        <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-[#222222]">
+        {/* Navigation Tabs (Mobile-Friendly Horizontal Scroll) */}
+        <div className="flex items-center gap-2 overflow-x-auto pb-2 border-b border-[#222222] no-scrollbar">
           {[
-            { id: 'overview', label: 'Overview Metrics', icon: Crown },
             { id: 'products', label: `Products (${products.length})`, icon: Package },
+            { id: 'cms', label: 'Website CMS & Visuals', icon: Edit2, highlight: true },
             { id: 'orders', label: `Orders (${orders.length})`, icon: ShoppingBag },
             { id: 'inquiries', label: `Inquiries (${inquiries.length})`, icon: MessageCircle, badge: newInquiriesCount },
-            { id: 'settings', label: 'Store & Concierge Config', icon: Settings },
+            { id: 'settings', label: 'Store & Admins', icon: Settings },
+            { id: 'overview', label: 'Overview Metrics', icon: Crown },
           ].map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -304,9 +306,11 @@ export const AdminDashboard: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setActiveTab(tab.id as any)}
-                className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-sm transition flex items-center gap-2 cursor-pointer shrink-0 ${
+                className={`px-4 py-2.5 text-xs font-semibold uppercase tracking-wider rounded-sm transition flex items-center gap-2 cursor-pointer shrink-0 min-h-[44px] ${
                   isActive
-                    ? 'bg-[#C9A227] text-black font-bold'
+                    ? 'bg-[#C9A227] text-black font-bold shadow-md shadow-[#C9A227]/20'
+                    : tab.highlight
+                    ? 'bg-[#181818] text-[#E5C76B] border border-[#C9A227]/40 hover:bg-[#202020]'
                     : 'bg-[#141414] text-neutral-400 hover:text-white hover:bg-[#1A1A1A]'
                 }`}
               >
@@ -815,6 +819,33 @@ export const AdminDashboard: React.FC = () => {
               </div>
             )}
           </div>
+        )}
+
+        {/* ========================================================================= */}
+        {/* TAB: WEBSITE CMS & VISUALS STUDIO */}
+        {/* ========================================================================= */}
+        {activeTab === 'cms' && settings && (
+          <WebsiteCMSStudio
+            settings={settings}
+            onSave={async (updatedSettings) => {
+              setSavingSettings(true);
+              setSettingsError(null);
+              try {
+                await updateStoreSettings(updatedSettings);
+                setSettings(updatedSettings);
+                setSettingsSaveSuccess(true);
+                showNotice('Website changes published live to Firestore!');
+                setTimeout(() => setSettingsSaveSuccess(false), 5000);
+              } catch (err: any) {
+                setSettingsError(err.message || 'Failed to publish changes.');
+              } finally {
+                setSavingSettings(false);
+              }
+            }}
+            saving={savingSettings}
+            saveSuccess={settingsSaveSuccess}
+            saveError={settingsError}
+          />
         )}
 
         {/* ========================================================================= */}
@@ -1733,17 +1764,67 @@ const ProductFormModal: React.FC<ProductFormModalProps> = ({ product, onClose, o
             </div>
           </div>
 
-          <div>
-            <label className="block text-[11px] font-semibold text-neutral-300 uppercase mb-1">
-              Image URLs (One per line)
-            </label>
+          <div className="space-y-3 bg-[#0E0E0E] p-3 rounded border border-neutral-800">
+            <div className="flex items-center justify-between">
+              <label className="block text-[11px] font-semibold text-neutral-300 uppercase">
+                Timepiece Images (Primary & Gallery)
+              </label>
+              <span className="text-[10px] text-neutral-400">First image is primary thumbnail</span>
+            </div>
+
+            {/* Quick Uploaded Watch Photos insertion */}
+            <div className="space-y-1.5">
+              <span className="text-[10px] text-[#C9A227] font-semibold uppercase block">
+                Quick Insert Uploaded Watch Photos:
+              </span>
+              <div className="flex items-center gap-1.5 flex-wrap">
+                {UPLOADED_WATCH_ASSETS.map((asset, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => {
+                      const trimmed = imagesText.trim();
+                      if (trimmed.includes(asset.url)) return;
+                      setImagesText(trimmed ? `${trimmed}\n${asset.url}` : asset.url);
+                    }}
+                    className="text-[10px] bg-[#181818] hover:bg-[#252525] text-neutral-200 hover:text-[#C9A227] px-2 py-1 rounded border border-neutral-700 transition cursor-pointer flex items-center gap-1"
+                  >
+                    <span>+ {asset.label.split(' ')[0]}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <textarea
               rows={3}
               value={imagesText}
               onChange={(e) => setImagesText(e.target.value)}
-              placeholder="https://..."
-              className="w-full bg-[#0B0B0B] border border-neutral-700 rounded p-2 text-white font-mono text-[11px]"
+              placeholder="https://... or /assets/aistudio/..."
+              className="w-full bg-[#070707] border border-neutral-700 rounded p-2 text-white font-mono text-[11px] focus:border-[#C9A227] focus:outline-none"
             />
+
+            {/* Live Visual Previews of Entered Images */}
+            {imagesText.trim() && (
+              <div className="space-y-1 pt-1">
+                <span className="text-[10px] text-neutral-400 uppercase font-mono block">
+                  Image Previews ({imagesText.split('\n').filter((s) => s.trim().length > 0).length}):
+                </span>
+                <div className="flex items-center gap-2 overflow-x-auto py-1">
+                  {imagesText
+                    .split('\n')
+                    .map((s) => s.trim())
+                    .filter((s) => s.length > 0)
+                    .map((url, i) => (
+                      <div key={i} className="relative group w-14 h-14 rounded overflow-hidden bg-black shrink-0 border border-neutral-700">
+                        <img src={url} alt="" className="w-full h-full object-cover" />
+                        <span className="absolute bottom-0 left-0 right-0 bg-black/80 text-[8px] text-center text-white py-0.2">
+                          #{i + 1}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className="flex items-center gap-6 pt-2">

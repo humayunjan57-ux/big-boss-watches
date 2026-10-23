@@ -2,6 +2,11 @@ import { Collection, Product, StoreSettings } from '../types';
 
 export const INITIAL_STORE_SETTINGS: StoreSettings = {
   businessName: 'BIG BOSS WATCHES',
+  brandTitle: 'BIG BOSS',
+  brandSubtitle: 'WATCHES • GENEVA',
+  logoUrl: '',
+  crestUrl: '',
+  topBarTagline: 'GENEVA ATELIER • OFFICIAL BOUTIQUE',
   slogan: 'TIME, REDEFINED.',
   brandStatement: 'PRECISION. POWER. PRESTIGE.',
   email: 'bossbigwatches@gmail.com',
@@ -18,10 +23,121 @@ export const INITIAL_STORE_SETTINGS: StoreSettings = {
     instagram: 'https://instagram.com/bigbosswatches',
     facebook: 'https://facebook.com/bigbosswatches',
     twitter: 'https://twitter.com/bigbosswatches',
+    youtube: 'https://youtube.com',
   },
   announcementText: '',
+  announcementActive: false,
+
+  // Hero Section
+  heroBadge: 'GENEVA HOROLOGICAL EXCELLENCE • 2026 ALLOCATIONS',
   heroHeadline: 'TIME, REDEFINED.',
-  heroSubheadline: 'PRECISION. POWER. PRESTIGE. Forged in aerospace-grade materials, sapphire crystal, and uncompromising ambition.',
+  heroSubheadline: 'PRECISION. POWER. PRESTIGE.',
+  heroDescription: 'Engineered for modern leaders who command destiny. Forged in DLC obsidian steel, 18K yellow gold, and sapphire crystal with Swiss-caliber mechanical chronometry.',
+  heroImageUrl: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=2000&q=90',
+  heroPrimaryBtnText: 'Shop All Timepieces',
+  heroSecondaryBtnText: 'Explore Collections',
+  trustBadges: [
+    'Complimentary Insured Courier',
+    '5-Year International Warranty',
+    'Cash on Delivery Available',
+  ],
+
+  // Curated Collections
+  collectionsSectionTitle: 'The Two Pillars of Prestige',
+  collectionsSectionSubtitle: 'CURATED MASTER SERIES',
+  collectionsSectionDesc: 'Discover the minimalist stealth of Big Boss Noir and the sovereign majesty of Big Boss Royal.',
+  noirTitle: 'BIG BOSS NOIR',
+  noirSubtitle: 'Shadowed Elegance & Stealth Precision',
+  noirDescription: 'Crafted for those who command silence and authority. Monochromatic obsidian cases, DLC matte coatings, forged carbon, and Swiss-engineered automatic calibres.',
+  noirImageUrl: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1400&q=85',
+  royalTitle: 'BIG BOSS ROYAL',
+  royalSubtitle: 'Sovereign Prestige & 18K Horology',
+  royalDescription: 'The definitive statement of triumph and majesty. Imperial gold accents, fluted bezels, sunburst champagne dials, and open exhibition casebacks displaying master craftsmanship.',
+  royalImageUrl: 'https://images.unsplash.com/photo-1547996160-71dfabbce574?auto=format&fit=crop&w=1400&q=85',
+
+  // Craftsmanship & Code
+  craftsmanshipBadge: 'THE BIG BOSS CODE',
+  craftsmanshipTitle: 'Crafted Without Compromise.',
+  craftsmanshipDesc: 'We reject mass-produced mediocrity. BIG BOSS WATCHES manufactures each timepiece with the same tolerances required by aerospace engineering and Swiss haute horology.',
+  craftsmanshipImageUrl: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=85',
+  pillar1Title: 'Aerospace-Grade Metallurgy',
+  pillar1Desc: 'Solid 316L medical stainless steel and multi-layer DLC scratch resistant coatings.',
+  pillar2Title: 'Double-Curved Sapphire',
+  pillar2Desc: 'Diamond-hardness sapphire crystal with dual anti-reflective inner coating.',
+  pillar3Title: 'Up to 72 Hours Power Reserve',
+  pillar3Desc: 'High-beat automatic calibres tested across 5 individual positions for supreme accuracy.',
+
+  // VIP Concierge
+  vipConciergeTitle: 'VIP Concierge Service',
+  vipConciergeDesc: 'Connect directly with our master horologist consultants via phone or WhatsApp for custom sizing, technical questions, or bespoke orders.',
+  vipWhatsappTitle: 'Instant WhatsApp Concierge',
+  vipWhatsappDesc: 'Have a question regarding watch specifications, availability, or immediate dispatch? Speak directly to our luxury support team in real-time.',
+  codBoxTitle: 'Secure and Flexible Luxury Acquisition',
+  codBoxDesc: 'Inspect your luxury presentation box and documentation before completing payment at your doorstep, where enabled.',
+
+  // About Page
+  aboutHeroTitle: 'BIG BOSS WATCHES',
+  aboutHeroSubtitle: 'GENEVA HOROLOGICAL TRADITION',
+  aboutStoryTitle: 'The Genesis of Authority',
+  aboutStoryP1: 'In an era dominated by transient digital devices and planned obsolescence, BIG BOSS WATCHES was founded on an unapologetic premise: true power is permanent.',
+  aboutStoryP2: 'Inspired by classical Swiss horology and fortified with aerospace materials, our master watchmakers combine centuries-old finishing techniques with high-tensile 316L medical stainless steel, Diamond-Like Carbon (DLC) crystalline coatings, and scratchproof curved sapphire crystals.',
+  aboutStoryP3: 'Each timepiece requires upwards of 140 meticulous manufacturing stages, including hand-beveled bridges, perlage circular graining, and multi-position chronometric testing.',
+  aboutQuote: 'Every component is balanced to fractions of a micron, mirroring the calculated exactitude of leaders.',
+  aboutCraftImageUrl: 'https://images.unsplash.com/photo-1522335789203-aabd1fc54bc9?auto=format&fit=crop&w=1200&q=85',
+
+  // Testimonials
+  testimonials: [
+    {
+      id: 't-1',
+      author: 'Sheik Mansoor Al-Zahrani',
+      location: 'Dubai, UAE',
+      watchModel: 'Big Boss Noir Sovereign Chronograph',
+      quote: 'The weight, the DLC finish, the tactile response of the chronograph pushers. It stands shoulder to shoulder with Geneva\'s six-figure timepieces.',
+      rating: 5,
+    },
+    {
+      id: 't-2',
+      author: 'Marcus Vance',
+      location: 'London, UK',
+      watchModel: 'Big Boss Royal Imperator Gold',
+      quote: 'Unrivaled presence in the boardroom. The 18K yellow gold tone is majestic without ostentation, and the timekeeping precision is immaculate.',
+      rating: 5,
+    },
+    {
+      id: 't-3',
+      author: 'Tariq H. Qureshi',
+      location: 'Lahore, Pakistan',
+      watchModel: 'Big Boss Noir Phantom Tourbillon',
+      quote: 'Delivered in an armored box with full provenance papers. The VIP Concierge verified every detail via WhatsApp. Pure perfection.',
+      rating: 5,
+    },
+  ],
+
+  // FAQs
+  faqs: [
+    {
+      id: 'faq-1',
+      category: 'Orders & Acquisition',
+      question: 'How does Cash on Delivery (COD) work for luxury watches?',
+      answer: 'Our armored courier delivers the timepiece directly to your door in our tamper-evident presentation case. You are permitted to inspect the outer seal and documentation prior to completing the cash payment.',
+    },
+    {
+      id: 'faq-2',
+      category: 'Warranty & Authenticity',
+      question: 'What is covered under the 5-Year International Warranty?',
+      answer: 'Every BIG BOSS timepiece is protected against manufacturing defects, balance wheel regulation anomalies, and water ingress under certified atmospheric conditions.',
+    },
+    {
+      id: 'faq-3',
+      category: 'Craftsmanship',
+      question: 'Are the watches automatic or battery-powered?',
+      answer: 'All BIG BOSS timepieces are driven by mechanical automatic calibres or hand-wound tourbillons, powered solely by your kinetic motion and precision hairsprings.',
+    },
+  ],
+
+  // Footer & Legal
+  footerAbout: 'Forged in Geneva and distributed globally to titans of industry and visionary collectors. Dedicated to uncompromised mechanical mastery, surgical metallurgy, and sovereign presence.',
+  copyrightText: '© 2026 BIG BOSS WATCHES. All rights reserved. Registered trademark of Geneva Haute Horology Atelier.',
 };
 
 export const INITIAL_COLLECTIONS: Collection[] = [

@@ -130,8 +130,29 @@ export interface ContactMessage {
   updatedAt?: string;
 }
 
+export interface TestimonialItem {
+  id: string;
+  author: string;
+  location: string;
+  watchModel: string;
+  quote: string;
+  rating: number;
+}
+
+export interface FaqItem {
+  id: string;
+  question: string;
+  answer: string;
+  category?: string;
+}
+
 export interface StoreSettings {
   businessName: string;
+  brandTitle?: string;
+  brandSubtitle?: string;
+  logoUrl?: string;
+  crestUrl?: string;
+  topBarTagline?: string;
   slogan: string;
   brandStatement: string;
   email: string;
@@ -151,8 +172,69 @@ export interface StoreSettings {
     youtube?: string;
   };
   announcementText?: string;
+  announcementActive?: boolean;
+
+  // Hero Section
+  heroBadge?: string;
   heroHeadline?: string;
   heroSubheadline?: string;
+  heroDescription?: string;
+  heroImageUrl?: string;
+  heroPrimaryBtnText?: string;
+  heroSecondaryBtnText?: string;
+  trustBadges?: string[];
+
+  // Collections Showcase
+  collectionsSectionTitle?: string;
+  collectionsSectionSubtitle?: string;
+  collectionsSectionDesc?: string;
+  noirTitle?: string;
+  noirSubtitle?: string;
+  noirDescription?: string;
+  noirImageUrl?: string;
+  royalTitle?: string;
+  royalSubtitle?: string;
+  royalDescription?: string;
+  royalImageUrl?: string;
+
+  // The Big Boss Code & Craftsmanship
+  craftsmanshipBadge?: string;
+  craftsmanshipTitle?: string;
+  craftsmanshipDesc?: string;
+  craftsmanshipImageUrl?: string;
+  pillar1Title?: string;
+  pillar1Desc?: string;
+  pillar2Title?: string;
+  pillar2Desc?: string;
+  pillar3Title?: string;
+  pillar3Desc?: string;
+
+  // VIP Concierge & Acquisition
+  vipConciergeTitle?: string;
+  vipConciergeDesc?: string;
+  vipWhatsappTitle?: string;
+  vipWhatsappDesc?: string;
+  codBoxTitle?: string;
+  codBoxDesc?: string;
+
+  // About Page
+  aboutHeroTitle?: string;
+  aboutHeroSubtitle?: string;
+  aboutStoryTitle?: string;
+  aboutStoryP1?: string;
+  aboutStoryP2?: string;
+  aboutStoryP3?: string;
+  aboutQuote?: string;
+  aboutCraftImageUrl?: string;
+
+  // Testimonials & FAQs
+  testimonials?: TestimonialItem[];
+  faqs?: FaqItem[];
+
+  // Footer & Legal
+  footerAbout?: string;
+  copyrightText?: string;
+
   adminEmails?: string[];
 }
 

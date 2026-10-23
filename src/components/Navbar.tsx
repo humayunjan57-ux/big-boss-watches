@@ -58,12 +58,20 @@ export const Navbar: React.FC<NavbarProps> = ({
 
   return (
     <header className="sticky top-0 z-40 w-full bg-[#0B0B0B]/95 backdrop-blur-md border-b border-[#C9A227]/20 transition-all">
+      {/* Dynamic Announcement Banner if active */}
+      {storeSettings?.announcementActive && storeSettings?.announcementText && (
+        <div className="bg-[#C9A227] text-black text-xs font-bold py-1.5 px-4 text-center tracking-widest uppercase flex items-center justify-center gap-2 shadow-inner">
+          <Sparkles className="w-3.5 h-3.5 text-black animate-spin" />
+          <span>{storeSettings.announcementText}</span>
+        </div>
+      )}
+
       {/* Top Luxury Concierge Bar */}
       <div className="bg-gradient-to-r from-[#121212] via-[#1a1710] to-[#121212] text-xs text-[#E5C76B] py-2 px-4 border-b border-[#C9A227]/15">
         <div className="max-w-7xl mx-auto flex flex-col sm:flex-row items-center justify-between gap-2 text-center sm:text-left">
           <div className="flex items-center gap-2 justify-center">
             <span className="text-[10px] font-semibold tracking-[0.2em] text-[#C9A227] uppercase">
-              GENEVA ATELIER • OFFICIAL BOUTIQUE
+              {storeSettings?.topBarTagline || 'GENEVA ATELIER • OFFICIAL BOUTIQUE'}
             </span>
           </div>
           <div className="flex items-center gap-4 text-xs text-[#B8B8B8]">
@@ -77,7 +85,7 @@ export const Navbar: React.FC<NavbarProps> = ({
             </a>
             <span className="hidden md:inline text-neutral-600">|</span>
             <a
-              href={`https://wa.me/92${whatsapp1.replace(/\D/g, '').replace(/^0/, '')}?text=${encodeURIComponent('Hello BIG BOSS WATCHES, I am inquiring about your luxury timepieces.')}`}
+              href={`https://wa.me/92${whatsapp1.replace(/\D/g, '').replace(/^0/, '')}?text=${encodeURIComponent('Hello ' + (storeSettings?.brandTitle || 'BIG BOSS') + ', I am inquiring about your luxury timepieces.')}`}
               target="_blank"
               rel="noopener noreferrer"
               className="flex items-center gap-1 text-[#25D366] hover:text-[#2fe675] transition font-medium"
@@ -95,15 +103,25 @@ export const Navbar: React.FC<NavbarProps> = ({
           onClick={() => onNavigate('home')}
           className="flex items-center gap-3 text-left group cursor-pointer focus:outline-none"
         >
-          <div className="w-10 h-10 rounded-sm bg-gradient-to-br from-[#1C1C1C] to-[#0A0A0A] border border-[#C9A227]/40 flex items-center justify-center shadow-lg group-hover:border-[#C9A227] transition-colors">
-            <Crown className="w-5 h-5 text-[#C9A227] group-hover:scale-110 transition-transform" />
-          </div>
+          {storeSettings?.logoUrl ? (
+            <div className="w-10 h-10 rounded-sm bg-gradient-to-br from-[#1C1C1C] to-[#0A0A0A] border border-[#C9A227]/40 flex items-center justify-center shadow-lg group-hover:border-[#C9A227] transition-colors overflow-hidden">
+              <img
+                src={storeSettings.logoUrl}
+                alt={storeSettings.brandTitle || 'Big Boss Watches'}
+                className="w-full h-full object-contain p-0.5"
+              />
+            </div>
+          ) : (
+            <div className="w-10 h-10 rounded-sm bg-gradient-to-br from-[#1C1C1C] to-[#0A0A0A] border border-[#C9A227]/40 flex items-center justify-center shadow-lg group-hover:border-[#C9A227] transition-colors">
+              <Crown className="w-5 h-5 text-[#C9A227] group-hover:scale-110 transition-transform" />
+            </div>
+          )}
           <div className="flex flex-col">
             <span className="font-serif text-lg sm:text-xl font-bold tracking-[0.2em] text-white group-hover:text-[#E5C76B] transition-colors">
-              BIG BOSS
+              {storeSettings?.brandTitle || 'BIG BOSS'}
             </span>
             <span className="text-[9px] tracking-[0.35em] text-[#C9A227] font-semibold uppercase -mt-0.5">
-              WATCHES • GENEVA
+              {storeSettings?.brandSubtitle || 'WATCHES • GENEVA'}
             </span>
           </div>
         </button>

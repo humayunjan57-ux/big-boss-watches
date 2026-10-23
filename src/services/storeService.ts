@@ -3,6 +3,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  onSnapshot,
   orderBy,
   query,
   runTransaction,
@@ -258,6 +259,26 @@ export async function updateStoreSettings(settings: Partial<StoreSettings>): Pro
   } catch (error) {
     handleFirestoreError(error, OperationType.WRITE, path);
   }
+}
+
+/**
+ * Subscribes in real-time to store settings and site CMS content.
+ */
+export function subscribeToStoreSettings(callback: (settings: StoreSettings) => void): () => void {
+  const settingsRef = doc(db, 'settings', 'store');
+  return onSnapshot(settingsRef, (snap) => {
+    if (snap.exists()) {
+      const data = snap.data() as Partial<StoreSettings>;
+      if (data.announcementText && data.announcementText.includes('EXCLUSIVE 2026 HOROLOGY RELEASE')) {
+        data.announcementText = '';
+      }
+      callback({ ...INITIAL_STORE_SETTINGS, ...data });
+    } else {
+      callback(INITIAL_STORE_SETTINGS);
+    }
+  }, (err) => {
+    console.warn('Real-time settings listener notice:', err);
+  });
 }
 
 // ========================
