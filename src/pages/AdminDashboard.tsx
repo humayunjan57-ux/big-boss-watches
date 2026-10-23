@@ -79,6 +79,7 @@ export const AdminDashboard: React.FC = () => {
   const [orderStatusFilter, setOrderStatusFilter] = useState<string>('all');
   const [inquirySearch, setInquirySearch] = useState('');
   const [inquiryStatusFilter, setInquiryStatusFilter] = useState<string>('all');
+  const [newAdminEmail, setNewAdminEmail] = useState('');
 
   const showNotice = (msg: string) => {
     setActionSuccess(msg);
@@ -971,6 +972,71 @@ export const AdminDashboard: React.FC = () => {
                   onChange={(e) => setSettings({ ...settings, codEnabled: e.target.checked })}
                   className="w-5 h-5 accent-[#C9A227] cursor-pointer"
                 />
+              </div>
+
+              {/* Authorized Staff & Admin Access */}
+              <div className="p-4 bg-[#181818] rounded-sm border border-neutral-700 space-y-3">
+                <div className="flex items-center gap-2">
+                  <ShieldCheck className="w-4 h-4 text-[#C9A227]" />
+                  <h4 className="font-semibold text-white">Authorized Admin Staff Emails</h4>
+                </div>
+                <p className="text-[11px] text-neutral-400 leading-relaxed">
+                  Emails added here can sign in and access this Admin Studio to manage watches, orders, and inquiries.
+                </p>
+
+                {/* List of current admins */}
+                <div className="space-y-1.5 pt-1">
+                  <div className="flex items-center justify-between p-2 bg-[#0E0E0E] rounded border border-neutral-800 text-xs font-mono">
+                    <span className="text-white">humayunjan57@gmail.com</span>
+                    <span className="text-[10px] text-[#C9A227] uppercase font-semibold">Master Admin</span>
+                  </div>
+                  {settings.adminEmails?.map((admEmail) => (
+                    <div key={admEmail} className="flex items-center justify-between p-2 bg-[#0E0E0E] rounded border border-neutral-800 text-xs font-mono">
+                      <span className="text-neutral-200">{admEmail}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = (settings.adminEmails || []).filter((e) => e !== admEmail);
+                          setSettings({ ...settings, adminEmails: updated });
+                        }}
+                        className="text-red-400 hover:text-red-300 text-[11px] cursor-pointer"
+                      >
+                        Remove
+                      </button>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Input to add new admin */}
+                <div className="flex gap-2 pt-2">
+                  <input
+                    type="email"
+                    value={newAdminEmail}
+                    onChange={(e) => setNewAdminEmail(e.target.value)}
+                    placeholder="e.g. colleague@company.com"
+                    className="flex-1 bg-[#0B0B0B] border border-neutral-700 rounded-sm py-1.5 px-3 text-white focus:border-[#C9A227] focus:outline-none text-xs"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => {
+                      const emailToAdd = newAdminEmail.trim().toLowerCase();
+                      if (!emailToAdd || !emailToAdd.includes('@')) {
+                        alert('Please enter a valid email address.');
+                        return;
+                      }
+                      const existing = settings.adminEmails || [];
+                      if (existing.map((e) => e.toLowerCase()).includes(emailToAdd) || emailToAdd === 'humayunjan57@gmail.com') {
+                        alert('This email is already an authorized administrator.');
+                        return;
+                      }
+                      setSettings({ ...settings, adminEmails: [...existing, emailToAdd] });
+                      setNewAdminEmail('');
+                    }}
+                    className="px-3.5 py-1.5 bg-[#1F1F1F] hover:bg-[#C9A227] hover:text-black border border-[#C9A227]/40 text-xs text-[#E5C76B] font-semibold rounded cursor-pointer transition shrink-0"
+                  >
+                    Add Admin Email
+                  </button>
+                </div>
               </div>
 
               <div className="pt-4">

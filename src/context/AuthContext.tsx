@@ -38,12 +38,30 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Check admin status
   const evaluateAdminStatus = async (user: User | null): Promise<boolean> => {
     if (!user || !user.email) return false;
-    const emailMatch = user.email.toLowerCase() === BOOTSTRAP_ADMIN_EMAIL.toLowerCase();
+    const userEmail = user.email.toLowerCase();
+    const emailMatch = userEmail === BOOTSTRAP_ADMIN_EMAIL.toLowerCase();
     if (emailMatch) return true;
 
     try {
       const adminDoc = await getDoc(doc(db, 'admins', user.uid));
-      return adminDoc.exists();
+      if (adminDoc.exists()) return true;
+
+      // Check authorized admin emails list in store settings
+      const settingsDoc = await getDoc(doc(db, 'settings', 'store'));
+      if (settingsDoc.exists()) {
+        const data = settingsDoc.data();
+        const adminEmails = (data?.adminEmails as string[]) || [];
+        if (adminEmails.map((e) => e.toLowerCase().trim()).includes(userEmail)) {
+          // Register UID in admins collection so security rules permit access
+          await setDoc(doc(db, 'admins', user.uid), {
+            email: user.email,
+            role: 'admin',
+            addedAt: new Date().toISOString(),
+          }, { merge: true });
+          return true;
+        }
+      }
+      return false;
     } catch {
       return false;
     }

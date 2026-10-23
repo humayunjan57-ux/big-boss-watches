@@ -47,8 +47,10 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultMo
         setSuccess('Password reset link dispatched. Please check your inbox.');
       }
     } catch (err: any) {
-      const msg = err.message || 'Authentication failed. Please verify credentials.';
-      if (msg.includes('auth/invalid-credential') || msg.includes('auth/wrong-password')) {
+      const msg = err.message || '';
+      if (msg.includes('auth/unauthorized-domain')) {
+        setError('Domain not authorized: add "bigbosswatches.vercel.app" to Firebase Console > Authentication > Settings > Authorized domains.');
+      } else if (msg.includes('auth/invalid-credential') || msg.includes('auth/wrong-password')) {
         setError('Invalid email or password. Please try again.');
       } else if (msg.includes('auth/email-already-in-use')) {
         setError('An account with this email already exists. Please sign in.');
@@ -69,7 +71,12 @@ export const AuthModal: React.FC<AuthModalProps> = ({ isOpen, onClose, defaultMo
       await signInWithGoogle();
       onClose();
     } catch (err: any) {
-      setError(err.message || 'Google sign in was cancelled or failed.');
+      const msg = err.message || '';
+      if (msg.includes('auth/unauthorized-domain')) {
+        setError('Domain not authorized in Firebase. Please add "bigbosswatches.vercel.app" to Firebase Console > Authentication > Settings > Authorized domains.');
+      } else {
+        setError(msg || 'Google sign in was cancelled or failed.');
+      }
     } finally {
       setSubmitting(false);
     }

@@ -153,6 +153,7 @@ export interface StoreSettings {
   announcementText?: string;
   heroHeadline?: string;
   heroSubheadline?: string;
+  adminEmails?: string[];
 }
 
 export interface UserProfile {
