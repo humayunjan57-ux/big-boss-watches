@@ -43,6 +43,25 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@400;500;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,300;0,400;0,500;0,600;0,700;1,400&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Instant 0ms Pre-Hydration Branding Synchronization -->
+    <script>
+      (function() {
+        try {
+          var raw = localStorage.getItem('bbw_cached_store_settings');
+          if (raw) {
+            var s = JSON.parse(raw);
+            if (s && s.brandTitle) {
+              document.title = s.brandTitle + (s.brandSubtitle ? ' – ' + s.brandSubtitle : ' – TIME, REDEFINED');
+            }
+            if (s && s.logoUrl && s.logoUrl.trim()) {
+              var links = document.querySelectorAll("link[rel*='icon']");
+              links.forEach(function(l) { l.href = s.logoUrl.trim(); });
+            }
+          }
+        } catch(e) {}
+      })();
+    </script>
   </head>
   <body class="bg-[#0B0B0B] text-white">
     <div id="root"></div>

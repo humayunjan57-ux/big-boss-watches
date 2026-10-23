@@ -16,6 +16,9 @@ import { OrderConfirmationPage } from './pages/OrderConfirmationPage';
 import { PolicyPages } from './pages/PolicyPages';
 import { ProductDetailPage } from './pages/ProductDetailPage';
 import {
+  getCachedCollections,
+  getCachedProducts,
+  getCachedStoreSettings,
   getCollections,
   getProducts,
   getStoreSettings,
@@ -37,35 +40,35 @@ function MainApp() {
   // Modals
   const [authModalOpen, setAuthModalOpen] = useState<boolean>(false);
 
-  // Firestore Data State
-  const [products, setProducts] = useState<Product[]>([]);
-  const [collections, setCollections] = useState<Collection[]>([]);
-  const [storeSettings, setStoreSettings] = useState<StoreSettings | undefined>(undefined);
-  const [initialLoading, setInitialLoading] = useState<boolean>(true);
+  // Firestore Data State with instant synchronous local cache hydration (0ms paint)
+  const [products, setProducts] = useState<Product[]>(() => getCachedProducts());
+  const [collections, setCollections] = useState<Collection[]>(() => getCachedCollections());
+  const [storeSettings, setStoreSettings] = useState<StoreSettings>(() => getCachedStoreSettings());
+  const [initialLoading, setInitialLoading] = useState<boolean>(false);
 
-  // Initial Data Fetch & Firestore Bootstrap + Real-Time Subscriptions
+  // Immediate Parallel Data Synchronization & Background Firestore Bootstrap
   useEffect(() => {
-    const init = async () => {
-      try {
-        await initializeStoreData();
-        const [prods, colls, settings] = await Promise.all([
-          getProducts(),
-          getCollections(),
-          getStoreSettings(),
-        ]);
-        setProducts(prods);
-        setCollections(colls);
-        setStoreSettings(settings);
-      } catch (err) {
-        console.warn('Initialization notice:', err);
-      } finally {
-        setInitialLoading(false);
-      }
-    };
+    // 1. Immediately fetch latest live data from Firestore in parallel
+    Promise.all([
+      getProducts(),
+      getCollections(),
+      getStoreSettings(),
+    ])
+      .then(([prods, colls, settings]) => {
+        if (prods && prods.length > 0) setProducts(prods);
+        if (colls && colls.length > 0) setCollections(colls);
+        if (settings) setStoreSettings(settings);
+      })
+      .catch((err) => {
+        console.warn('Background sync notice:', err);
+      });
 
-    init();
+    // 2. Trigger Firestore catalog bootstrap asynchronously in background (never blocks UI)
+    initializeStoreData().catch((err) => {
+      console.warn('Background store bootstrap notice:', err);
+    });
 
-    // Subscribe to live store settings & CMS content changes from Firestore
+    // 3. Real-time subscription to live store settings & CMS content changes
     const unsubscribeSettings = subscribeToStoreSettings((liveSettings) => {
       setStoreSettings(liveSettings);
     });

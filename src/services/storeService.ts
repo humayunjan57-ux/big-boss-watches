@@ -88,6 +88,90 @@ export async function initializeStoreData(force = false): Promise<void> {
 }
 
 // ========================
+// ZERO-DELAY LOCAL CACHE HELPERS
+// ========================
+const CACHE_KEY_SETTINGS = 'bbw_cached_store_settings';
+const CACHE_KEY_PRODUCTS = 'bbw_cached_products';
+const CACHE_KEY_COLLECTIONS = 'bbw_cached_collections';
+
+export function getCachedStoreSettings(): StoreSettings {
+  if (typeof window === 'undefined') return INITIAL_STORE_SETTINGS;
+  try {
+    const raw = localStorage.getItem(CACHE_KEY_SETTINGS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') {
+        return { ...INITIAL_STORE_SETTINGS, ...parsed };
+      }
+    }
+  } catch (e) {
+    // fallback
+  }
+  return INITIAL_STORE_SETTINGS;
+}
+
+export function setCachedStoreSettings(settings: Partial<StoreSettings>): void {
+  if (typeof window === 'undefined') return;
+  try {
+    const current = getCachedStoreSettings();
+    const updated = { ...current, ...settings };
+    localStorage.setItem(CACHE_KEY_SETTINGS, JSON.stringify(updated));
+  } catch (e) {
+    // fallback
+  }
+}
+
+export function getCachedProducts(): Product[] {
+  if (typeof window === 'undefined') return INITIAL_PRODUCTS;
+  try {
+    const raw = localStorage.getItem(CACHE_KEY_PRODUCTS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    // fallback
+  }
+  return INITIAL_PRODUCTS;
+}
+
+export function setCachedProducts(products: Product[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(CACHE_KEY_PRODUCTS, JSON.stringify(products));
+  } catch (e) {
+    // fallback
+  }
+}
+
+export function getCachedCollections(): Collection[] {
+  if (typeof window === 'undefined') return INITIAL_COLLECTIONS;
+  try {
+    const raw = localStorage.getItem(CACHE_KEY_COLLECTIONS);
+    if (raw) {
+      const parsed = JSON.parse(raw);
+      if (Array.isArray(parsed) && parsed.length > 0) {
+        return parsed;
+      }
+    }
+  } catch (e) {
+    // fallback
+  }
+  return INITIAL_COLLECTIONS;
+}
+
+export function setCachedCollections(collections: Collection[]): void {
+  if (typeof window === 'undefined') return;
+  try {
+    localStorage.setItem(CACHE_KEY_COLLECTIONS, JSON.stringify(collections));
+  } catch (e) {
+    // fallback
+  }
+}
+
+// ========================
 // PRODUCTS & COLLECTIONS
 // ========================
 
@@ -98,14 +182,15 @@ export async function getProducts(): Promise<Product[]> {
     const snapshot = await getDocs(q);
 
     if (snapshot.empty) {
-      // Return initial products as trusted initial data while database initializes
-      return INITIAL_PRODUCTS;
+      return getCachedProducts();
     }
 
-    return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Product, 'id'>) }));
+    const prods = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Product, 'id'>) }));
+    setCachedProducts(prods);
+    return prods;
   } catch (error) {
-    console.warn('Falling back to local catalog due to Firestore fetch state:', error);
-    return INITIAL_PRODUCTS;
+    console.warn('Serving cached luxury timepiece catalog:', error);
+    return getCachedProducts();
   }
 }
 
@@ -114,9 +199,11 @@ export async function getAllProductsAdmin(): Promise<Product[]> {
   try {
     const snapshot = await getDocs(collection(db, path));
     if (snapshot.empty) {
-      return INITIAL_PRODUCTS;
+      return getCachedProducts();
     }
-    return snapshot.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Product, 'id'>) }));
+    const prods = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Product, 'id'>) }));
+    setCachedProducts(prods);
+    return prods;
   } catch (error) {
     handleFirestoreError(error, OperationType.LIST, path);
   }
@@ -130,8 +217,8 @@ export async function getProductById(id: string): Promise<Product | null> {
     if (snap.exists()) {
       return { id: snap.id, ...(snap.data() as Omit<Product, 'id'>) };
     }
-    // Fallback to initial products
-    const found = INITIAL_PRODUCTS.find(p => p.id === id);
+    const cached = getCachedProducts();
+    const found = cached.find(p => p.id === id);
     return found || null;
   } catch (error) {
     handleFirestoreError(error, OperationType.GET, path);
@@ -147,10 +234,12 @@ export async function getProductBySlug(slug: string): Promise<Product | null> {
       const d = snap.docs[0];
       return { id: d.id, ...(d.data() as Omit<Product, 'id'>) };
     }
-    const found = INITIAL_PRODUCTS.find(p => p.slug === slug);
+    const cached = getCachedProducts();
+    const found = cached.find(p => p.slug === slug);
     return found || null;
   } catch (error) {
-    const found = INITIAL_PRODUCTS.find(p => p.slug === slug);
+    const cached = getCachedProducts();
+    const found = cached.find(p => p.slug === slug);
     return found || null;
   }
 }
@@ -160,11 +249,13 @@ export async function getCollections(): Promise<Collection[]> {
   try {
     const snapshot = await getDocs(collection(db, path));
     if (snapshot.empty) {
-      return INITIAL_COLLECTIONS;
+      return getCachedCollections();
     }
-    return snapshot.docs.map(d => ({ id: d.id as 'big-boss-noir' | 'big-boss-royal', ...(d.data() as Omit<Collection, 'id'>) }));
+    const colls = snapshot.docs.map(d => ({ id: d.id as 'big-boss-noir' | 'big-boss-royal', ...(d.data() as Omit<Collection, 'id'>) }));
+    setCachedCollections(colls);
+    return colls;
   } catch (error) {
-    return INITIAL_COLLECTIONS;
+    return getCachedCollections();
   }
 }
 
@@ -197,6 +288,10 @@ export async function addProduct(product: Omit<Product, 'id' | 'createdAt' | 'up
       createdAt: timestamp,
       updatedAt: timestamp,
     };
+    // Optimistic cache update
+    const currentCached = getCachedProducts();
+    setCachedProducts([newProduct, ...currentCached.filter(p => p.id !== newId)]);
+
     const cleaned = cleanFirestoreData(newProduct);
     await setDoc(doc(db, path, newId), cleaned);
     return newId;
@@ -208,6 +303,10 @@ export async function addProduct(product: Omit<Product, 'id' | 'createdAt' | 'up
 export async function updateProduct(id: string, updates: Partial<Product>): Promise<void> {
   const path = `products/${id}`;
   try {
+    // Optimistic cache update
+    const currentCached = getCachedProducts();
+    setCachedProducts(currentCached.map(p => p.id === id ? { ...p, ...updates, updatedAt: new Date().toISOString() } : p));
+
     const ref = doc(db, 'products', id);
     const cleaned = cleanFirestoreData({
       ...updates,
@@ -224,6 +323,10 @@ export async function updateProduct(id: string, updates: Partial<Product>): Prom
 export async function deleteProduct(id: string): Promise<void> {
   const path = `products/${id}`;
   try {
+    // Optimistic cache update
+    const currentCached = getCachedProducts();
+    setCachedProducts(currentCached.filter(p => p.id !== id));
+
     await deleteDoc(doc(db, 'products', id));
   } catch (error) {
     handleFirestoreError(error, OperationType.DELETE, path);
@@ -243,17 +346,22 @@ export async function getStoreSettings(): Promise<StoreSettings> {
       if (data.announcementText && data.announcementText.includes('EXCLUSIVE 2026 HOROLOGY RELEASE')) {
         data.announcementText = '';
       }
-      return { ...INITIAL_STORE_SETTINGS, ...data };
+      const fullSettings = { ...INITIAL_STORE_SETTINGS, ...data };
+      setCachedStoreSettings(fullSettings);
+      return fullSettings;
     }
-    return INITIAL_STORE_SETTINGS;
+    return getCachedStoreSettings();
   } catch (error) {
-    return INITIAL_STORE_SETTINGS;
+    return getCachedStoreSettings();
   }
 }
 
 export async function updateStoreSettings(settings: Partial<StoreSettings>): Promise<void> {
   const path = 'settings/store';
   try {
+    // Write-through immediate cache update so changes apply instantly
+    setCachedStoreSettings(settings);
+
     const cleaned = cleanFirestoreData(settings);
     await setDoc(doc(db, 'settings', 'store'), cleaned, { merge: true });
   } catch (error) {
@@ -272,9 +380,12 @@ export function subscribeToStoreSettings(callback: (settings: StoreSettings) => 
       if (data.announcementText && data.announcementText.includes('EXCLUSIVE 2026 HOROLOGY RELEASE')) {
         data.announcementText = '';
       }
-      callback({ ...INITIAL_STORE_SETTINGS, ...data });
+      const merged = { ...INITIAL_STORE_SETTINGS, ...data };
+      setCachedStoreSettings(merged);
+      callback(merged);
     } else {
-      callback(INITIAL_STORE_SETTINGS);
+      const fallback = getCachedStoreSettings();
+      callback(fallback);
     }
   }, (err) => {
     console.warn('Real-time settings listener notice:', err);
