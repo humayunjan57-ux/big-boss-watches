@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from 'react';
+import { AdSenseBanner } from './components/AdSenseBanner';
 import { AuthModal } from './components/AuthModal';
 import { CartDrawer } from './components/CartDrawer';
 import { Footer } from './components/Footer';
@@ -253,6 +254,9 @@ function MainApp() {
             onNavigateContact={() => handleNavigate('contact')}
           />
         )}
+
+        {/* Google AdSense Display Ad Unit on Every Page */}
+        <AdSenseBanner key={currentPage} />
       </main>
 
       {/* Cart Slide-Over Drawer */}
