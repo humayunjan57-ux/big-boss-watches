@@ -23,42 +23,55 @@ service cloud.firestore {
       return resource.data;
     }
 
-    function isMasterAdmin() {
-      return isSignedIn() && request.auth.token.email.lower() == 'humayunjan57@gmail.com';
+    function hasAdminEmail() {
+      return isSignedIn() &&
+        'email' in request.auth.token &&
+        request.auth.token.email != null &&
+        (
+          request.auth.token.email.lower() == 'humayunjan57@gmail.com' ||
+          request.auth.token.email.lower() == 'bossbigwatches@gmail.com'
+        );
     }
 
     function isApprovedAdminEmail() {
-      return isSignedIn() && (
-        isMasterAdmin() ||
+      return isSignedIn() &&
+        'email' in request.auth.token &&
+        request.auth.token.email != null &&
         (
-          exists(/databases/$(database)/documents/settings/store) &&
-          'adminEmails' in get(/databases/$(database)/documents/settings/store).data &&
-          get(/databases/$(database)/documents/settings/store).data.adminEmails.hasAny([request.auth.token.email.lower()])
-        )
-      );
+          hasAdminEmail() ||
+          (
+            exists(/databases/$(database)/documents/settings/store) &&
+            'adminEmails' in get(/databases/$(database)/documents/settings/store).data &&
+            get(/databases/$(database)/documents/settings/store).data.adminEmails.hasAny([request.auth.token.email.lower()])
+          )
+        );
+    }
+
+    function isRegisteredAdmin() {
+      return isSignedIn() && exists(/databases/$(database)/documents/admins/$(request.auth.uid));
     }
 
     function isAdmin() {
       return isSignedIn() && (
-        isMasterAdmin() ||
-        isApprovedAdminEmail() ||
-        exists(/databases/$(database)/documents/admins/$(request.auth.uid))
+        hasAdminEmail() ||
+        isRegisteredAdmin() ||
+        isApprovedAdminEmail()
       );
     }
 
-    // Products catalog
+    // Products catalog: PUBLIC READ for all customers and guests
     match /products/{productId} {
       allow read: if true;
       allow create, update, delete: if isAdmin() && isValidId(productId);
     }
 
-    // Collections (Noir, Royal)
+    // Collections (Noir, Royal): PUBLIC READ for all customers and guests
     match /collections/{collectionId} {
       allow read: if true;
       allow create, update, delete: if isAdmin() && isValidId(collectionId);
     }
 
-    // Boutique Settings (Store details, homepage announcements, policies)
+    // Boutique Settings (Store details, homepage announcements, policies): PUBLIC READ for all customers and guests
     match /settings/{settingId} {
       allow read: if true;
       allow create, update, delete: if isAdmin() && isValidId(settingId);
@@ -98,7 +111,7 @@ service cloud.firestore {
 
     // Customer Inquiries & Support Messages
     match /contactMessages/{messageId} {
-      allow read: if isAdmin() || (isSignedIn() && resource.data.email == request.auth.token.email);
+      allow read: if isAdmin() || (isSignedIn() && 'email' in request.auth.token && resource.data.email == request.auth.token.email);
       
       allow create: if isValidId(messageId) &&
         incoming().name is string && incoming().name.size() > 0 && incoming().name.size() <= 150 &&
@@ -121,7 +134,7 @@ service cloud.firestore {
     // Admins registry
     match /admins/{adminId} {
       allow read: if isSignedIn() && (request.auth.uid == adminId || isAdmin()) && isValidId(adminId);
-      allow write: if (isAdmin() || (isSignedIn() && request.auth.uid == adminId && isApprovedAdminEmail())) && isValidId(adminId);
+      allow write: if isSignedIn() && (isAdmin() || (request.auth.uid == adminId && (hasAdminEmail() || isApprovedAdminEmail()))) && isValidId(adminId);
     }
   }
 }

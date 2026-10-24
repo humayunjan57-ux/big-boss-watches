@@ -24,6 +24,8 @@ import {
   getProducts,
   getStoreSettings,
   initializeStoreData,
+  subscribeToCollections,
+  subscribeToProducts,
   subscribeToStoreSettings,
 } from './services/storeService';
 import { Collection, Order, Product, StoreSettings } from './types';
@@ -49,7 +51,7 @@ function MainApp() {
 
   // Immediate Parallel Data Synchronization & Background Firestore Bootstrap
   useEffect(() => {
-    // 1. Immediately fetch latest live data from Firestore in parallel
+    // 1. Immediately fetch latest live data from Firestore in parallel for instant display
     Promise.all([
       getProducts(),
       getCollections(),
@@ -69,12 +71,28 @@ function MainApp() {
       console.warn('Background store bootstrap notice:', err);
     });
 
-    // 3. Real-time subscription to live store settings & CMS content changes
+    // 3. Real-time subscriptions: Any admin update to products, collections, or CMS is pushed live to ALL guests & users
+    const unsubscribeProducts = subscribeToProducts((liveProducts) => {
+      if (liveProducts && liveProducts.length > 0) {
+        setProducts(liveProducts);
+      }
+    });
+
+    const unsubscribeCollections = subscribeToCollections((liveCollections) => {
+      if (liveCollections && liveCollections.length > 0) {
+        setCollections(liveCollections);
+      }
+    });
+
     const unsubscribeSettings = subscribeToStoreSettings((liveSettings) => {
-      setStoreSettings(liveSettings);
+      if (liveSettings) {
+        setStoreSettings(liveSettings);
+      }
     });
 
     return () => {
+      unsubscribeProducts();
+      unsubscribeCollections();
       unsubscribeSettings();
     };
   }, []);
@@ -98,6 +116,16 @@ function MainApp() {
       });
     }
   }, [storeSettings]);
+
+  // Keep selectedProduct in sync with live Firestore updates
+  useEffect(() => {
+    if (selectedProduct) {
+      const refreshed = products.find((p) => p.id === selectedProduct.id);
+      if (refreshed) {
+        setSelectedProduct(refreshed);
+      }
+    }
+  }, [products]);
 
   // Scroll to top on page transition
   const handleNavigate = (page: string, param?: string) => {

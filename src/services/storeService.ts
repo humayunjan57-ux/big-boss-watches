@@ -37,6 +37,8 @@ let isSeeding = false;
  */
 export async function initializeStoreData(force = false): Promise<void> {
   if (isSeeding) return;
+  // If no user is signed in, guests should not attempt database writes
+  if (!auth.currentUser) return;
   isSeeding = true;
 
   try {
@@ -71,17 +73,16 @@ export async function initializeStoreData(force = false): Promise<void> {
     }
 
     // 4. Ensure bootstrap admin document exists
-    const adminRef = doc(db, 'admins', 'super-admin');
-    const adminSnap = await getDoc(adminRef);
-    if (!adminSnap.exists()) {
+    if (auth.currentUser) {
+      const adminRef = doc(db, 'admins', auth.currentUser.uid);
       await setDoc(adminRef, {
-        email: BOOTSTRAP_ADMIN_EMAIL,
-        role: 'super-admin',
+        email: auth.currentUser.email || BOOTSTRAP_ADMIN_EMAIL,
+        role: 'master-admin',
         createdAt: new Date().toISOString(),
-      });
+      }, { merge: true });
     }
   } catch (error) {
-    console.warn('Initial store bootstrap notice (rules may require signed-in admin for writes):', error);
+    console.warn('Initial store bootstrap notice:', error);
   } finally {
     isSeeding = false;
   }
@@ -178,14 +179,15 @@ export function setCachedCollections(collections: Collection[]): void {
 export async function getProducts(): Promise<Product[]> {
   const path = 'products';
   try {
-    const q = query(collection(db, path), where('active', '==', true));
-    const snapshot = await getDocs(q);
+    const snapshot = await getDocs(collection(db, path));
 
     if (snapshot.empty) {
       return getCachedProducts();
     }
 
-    const prods = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Product, 'id'>) }));
+    const all = snapshot.docs.map(d => ({ id: d.id, ...(d.data() as Omit<Product, 'id'>) }));
+    const active = all.filter(p => p.active !== false);
+    const prods = active.length > 0 ? active : all;
     setCachedProducts(prods);
     return prods;
   } catch (error) {
@@ -267,8 +269,14 @@ function cleanFirestoreData<T extends Record<string, any>>(obj: T): T {
   const result: any = {};
   for (const [key, value] of Object.entries(obj)) {
     if (value !== undefined) {
-      if (value !== null && typeof value === 'object' && !Array.isArray(value)) {
-        result[key] = cleanFirestoreData(value);
+      if (value !== null && typeof value === 'object') {
+        if (Array.isArray(value)) {
+          result[key] = value.map((item) =>
+            item !== null && typeof item === 'object' ? cleanFirestoreData(item) : item
+          );
+        } else {
+          result[key] = cleanFirestoreData(value);
+        }
       } else {
         result[key] = value;
       }
@@ -278,31 +286,76 @@ function cleanFirestoreData<T extends Record<string, any>>(obj: T): T {
 }
 
 /**
- * Non-blocking fast Firestore write helper.
- * Commits writes to the local Firestore memory buffer & cache immediately, and
- * races the network with a tight timeout (180ms) so the UI responds instantaneously
- * without waiting on remote network roundtrips. The background promise continues
- * syncing to Cloud Firestore without blocking the user.
+ * Subscribes in real-time to the public products catalog.
+ * Any timepiece added, modified, or removed in the Admin Dashboard is immediately
+ * pushed to all customers and guest visitors across devices with zero delay.
  */
-async function fastFirestoreWrite(writePromise: Promise<any>, timeoutMs = 180): Promise<void> {
-  try {
-    await Promise.race([
-      writePromise,
-      new Promise((resolve) => setTimeout(resolve, timeoutMs)),
-    ]);
-  } catch (error) {
-    console.warn('Fast Firestore write note (queued for background delivery):', error);
-  }
+export function subscribeToProducts(callback: (products: Product[]) => void): () => void {
+  const productsRef = collection(db, 'products');
+  return onSnapshot(
+    productsRef,
+    (snapshot) => {
+      if (!snapshot.empty) {
+        const prods = snapshot.docs
+          .map((d) => ({ id: d.id, ...(d.data() as Omit<Product, 'id'>) }))
+          .filter((p) => p.active !== false);
+        setCachedProducts(prods);
+        callback(prods);
+      } else {
+        callback(getCachedProducts());
+      }
+    },
+    (err) => {
+      console.warn('Real-time products listener notice:', err);
+    }
+  );
+}
+
+/**
+ * Subscribes in real-time to public collections.
+ */
+export function subscribeToCollections(callback: (collections: Collection[]) => void): () => void {
+  const collRef = collection(db, 'collections');
+  return onSnapshot(
+    collRef,
+    (snapshot) => {
+      if (!snapshot.empty) {
+        const colls = snapshot.docs
+          .map((d) => ({ id: d.id as 'big-boss-noir' | 'big-boss-royal', ...(d.data() as Omit<Collection, 'id'>) }))
+          .filter((c) => c.active !== false);
+        setCachedCollections(colls);
+        callback(colls);
+      } else {
+        callback(getCachedCollections());
+      }
+    },
+    (err) => {
+      console.warn('Real-time collections listener notice:', err);
+    }
+  );
+}
+
+/**
+ * Persists writes directly to Cloud Firestore and validates success.
+ * Ensures data is securely saved to Cloud Firestore for all viewers and guests.
+ */
+async function fastFirestoreWrite(writePromise: Promise<any>): Promise<void> {
+  await writePromise;
 }
 
 export async function addProduct(product: Omit<Product, 'id' | 'createdAt' | 'updatedAt'>): Promise<string> {
   const path = 'products';
   try {
-    const newId = product.slug || `bb-${Date.now()}`;
+    const rawSlug = (product.slug || product.name || '')
+      .toLowerCase()
+      .replace(/[^a-z0-9_-]+/g, '-')
+      .replace(/(^-|-$)+/g, '');
+    const newId = rawSlug ? (rawSlug.startsWith('bb-') ? rawSlug : `bb-${rawSlug}`) : `bb-${Date.now()}`;
     const timestamp = new Date().toISOString();
     const newProduct: Product = {
       ...product,
       id: newId,
+      active: product.active !== false,
       createdAt: timestamp,
       updatedAt: timestamp,
     };

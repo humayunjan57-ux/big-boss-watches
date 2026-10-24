@@ -38,9 +38,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Check admin status
   const evaluateAdminStatus = async (user: User | null): Promise<boolean> => {
     if (!user || !user.email) return false;
-    const userEmail = user.email.toLowerCase();
-    const emailMatch = userEmail === BOOTSTRAP_ADMIN_EMAIL.toLowerCase();
-    if (emailMatch) return true;
+    const userEmail = user.email.toLowerCase().trim();
+    const isMaster =
+      userEmail === BOOTSTRAP_ADMIN_EMAIL.toLowerCase() ||
+      userEmail === 'bossbigwatches@gmail.com';
+
+    if (isMaster) {
+      // Ensure master admin UID is in admins collection so rules allow access seamlessly
+      setDoc(doc(db, 'admins', user.uid), {
+        email: user.email,
+        role: 'master-admin',
+        updatedAt: new Date().toISOString(),
+      }, { merge: true }).catch((err) => console.warn('Admin doc sync notice:', err));
+      return true;
+    }
 
     try {
       const adminDoc = await getDoc(doc(db, 'admins', user.uid));

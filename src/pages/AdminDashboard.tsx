@@ -869,15 +869,14 @@ export const AdminDashboard: React.FC = () => {
             onSave={async (updatedSettings) => {
               setSavingSettings(true);
               setSettingsError(null);
-              // Instantly update parent state and local cache
-              setSettings(updatedSettings);
-              showNotice('Website changes saved instantly to cache & live database!');
               try {
                 await updateStoreSettings(updatedSettings);
+                setSettings(updatedSettings);
                 setSettingsSaveSuccess(true);
+                showNotice('Website changes saved to database and published live to all visitors!');
                 setTimeout(() => setSettingsSaveSuccess(false), 4000);
               } catch (err: any) {
-                setSettingsError(err.message || 'Failed to publish changes.');
+                setSettingsError(err.message || 'Failed to publish changes to database.');
               } finally {
                 setSavingSettings(false);
               }
@@ -922,14 +921,13 @@ export const AdminDashboard: React.FC = () => {
                     adminEmails: adminEmailsList,
                   };
 
-                  // Instant local state commit
+                  await updateStoreSettings(updatedSettings);
+
                   setSettings(updatedSettings);
                   setNewAdminEmail('');
                   setSettingsSaveSuccess(true);
-                  showNotice('Boutique configuration saved instantly!');
+                  showNotice('Boutique configuration saved to database and live for all visitors!');
                   setTimeout(() => setSettingsSaveSuccess(false), 4000);
-
-                  await updateStoreSettings(updatedSettings);
                 } catch (err: any) {
                   setSettingsError(err.message || 'Failed to save settings.');
                 } finally {
